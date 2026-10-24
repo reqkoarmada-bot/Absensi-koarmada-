@@ -1,1 +1,744 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AbsensiRP - Dashboard Komando Armada RI</title>
+    
+    <!-- Google Fonts & Lucide Icons -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
+    <!-- Firebase SDK (Compat Version) -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+
+    <style>
+        :root {
+            --bg-dark: #0d1117;
+            --bg-card: #161b22;
+            --bg-card-hover: #1f242d;
+            --border-color: #30363d;
+            --text-main: #f0f6fc;
+            --text-muted: #8b949e;
+            --accent-blue: #4f46e5;
+            --accent-blue-hover: #4338ca;
+            --accent-green: #238636;
+            --accent-green-bg: rgba(35, 134, 54, 0.15);
+            --accent-red: #da3633;
+            --accent-red-bg: rgba(218, 54, 51, 0.15);
+            --accent-purple: #8957e5;
+            --accent-yellow: #d29922;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .navbar {
+            width: 100%;
+            max-width: 480px;
+            background-color: #161b22;
+            padding: 12px 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border-color);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .brand-logo {
+            background-color: var(--accent-blue);
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            box-shadow: 0 2px 8px rgba(79, 70, 229, 0.4);
+        }
+
+        .brand-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            letter-spacing: -0.3px;
+        }
+
+        .menu-btn {
+            background: none;
+            border: none;
+            color: var(--text-main);
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 6px;
+        }
+
+        .app-container {
+            width: 100%;
+            max-width: 480px;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            padding-bottom: 80px;
+        }
+
+        .card {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 18px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .card-header-title {
+            font-size: 1.25rem;
+            font-weight: 800;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .stat-card {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .stat-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 4px;
+        }
+
+        .stat-icon.blue { background-color: rgba(79, 70, 229, 0.15); color: #818cf8; }
+        .stat-icon.green { background-color: var(--accent-green-bg); color: #4ade80; }
+        .stat-icon.red { background-color: var(--accent-red-bg); color: #f87171; }
+        .stat-icon.purple { background-color: rgba(137, 87, 229, 0.15); color: #c084fc; }
+        .stat-icon.yellow { background-color: rgba(210, 153, 34, 0.15); color: #facc15; }
+
+        .stat-value {
+            font-size: 1.8rem;
+            font-weight: 800;
+            line-height: 1;
+        }
+
+        .stat-label {
+            font-size: 0.72rem;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .bot-status-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .badge-online {
+            background-color: rgba(35, 134, 54, 0.2);
+            color: #4ade80;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            border: 1px solid rgba(74, 222, 128, 0.3);
+        }
+
+        .bot-info-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .bot-avatar {
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            background-color: var(--accent-blue);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 0.9rem;
+        }
+
+        .bot-meta {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        .bot-meta span {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .form-label {
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase;
+        }
+
+        .form-input, .form-select {
+            background-color: #0d1117;
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            padding: 12px;
+            border-radius: 10px;
+            font-size: 0.9rem;
+            outline: none;
+            width: 100%;
+        }
+
+        .btn {
+            padding: 12px;
+            border-radius: 10px;
+            border: none;
+            font-weight: 600;
+            font-size: 0.9rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: all 0.2s;
+        }
+
+        .btn-primary { background-color: var(--accent-blue); color: white; }
+        .btn-secondary { background-color: #21262d; color: var(--text-main); border: 1px solid var(--border-color); }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 4px;
+        }
+
+        .badge-count {
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 700;
+        }
+
+        .badge-count.green { background-color: var(--accent-green-bg); color: #4ade80; }
+        .badge-count.red { background-color: var(--accent-red-bg); color: #f87171; }
+
+        .search-box {
+            position: relative;
+        }
+
+        .search-box i {
+            position: absolute;
+            left: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+        }
+
+        .search-box input {
+            padding-left: 34px;
+        }
+
+        .member-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            max-height: 280px;
+            overflow-y: auto;
+            padding-right: 4px;
+        }
+
+        .member-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .member-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .member-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            object-fit: cover;
+            background-color: #30363d;
+        }
+
+        .member-details {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .member-name {
+            font-size: 0.85rem;
+            font-weight: 600;
+            max-width: 180px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .member-handle {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        .status-badge {
+            font-size: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-weight: 600;
+        }
+
+        .status-badge.green { color: #4ade80; }
+        .status-badge.red { color: #f87171; }
+
+        .step-list {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .step-item {
+            display: flex;
+            gap: 12px;
+        }
+
+        .step-num {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background-color: rgba(79, 70, 229, 0.2);
+            color: #818cf8;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            font-weight: 700;
+            flex-shrink: 0;
+            margin-top: 2px;
+        }
+
+        .step-content {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            font-size: 0.85rem;
+        }
+
+        .step-title { font-weight: 700; color: var(--text-main); }
+        .step-desc { color: var(--text-muted); line-height: 1.4; font-size: 0.8rem; }
+
+        .calendar-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 0;
+        }
+
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 4px;
+        }
+
+        .cal-day {
+            width: 10px;
+            height: 10px;
+            border-radius: 2px;
+            background-color: #21262d;
+        }
+
+        .cal-day.active { background-color: #238636; }
+
+        .tab-bar {
+            position: fixed;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100%;
+            max-width: 480px;
+            background-color: #161b22;
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-around;
+            padding: 10px 0;
+            z-index: 100;
+        }
+
+        .tab-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            color: var(--text-muted);
+            font-size: 0.65rem;
+            font-weight: 600;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        .tab-item.active { color: #818cf8; }
+    </style>
+</head>
+<body>
+
+    <header class="navbar">
+        <div class="brand">
+            <div class="brand-logo">
+                <i data-lucide="shield-check" size="20"></i>
+            </div>
+            <span class="brand-title">AbsensiRP</span>
+        </div>
+        <button class="menu-btn" onclick="toggleMenu()"><i data-lucide="menu" size="22"></i></button>
+    </header>
+
+    <main class="app-container">
+
+        <!-- BOT STATUS CARD -->
+        <section class="card">
+            <div class="bot-status-header">
+                <span style="font-size: 1.1rem; font-weight: 700;">Status Bot</span>
+                <span class="badge-online">Terhubung</span>
+            </div>
+            <div class="bot-info-row">
+                <div class="bot-avatar">AB</div>
+                <div class="bot-meta">
+                    <strong style="color: var(--text-main); font-size: 0.95rem;">Absensi#7539</strong>
+                    <span><i data-lucide="server" size="12"></i> [RI] Komando Armada RI</span>
+                    <span><i data-lucide="users" size="12"></i> 141 anggota</span>
+                </div>
+            </div>
+            <button class="btn btn-secondary"><i data-lucide="refresh-cw" size="16"></i> Sambungkan</button>
+            <button class="btn btn-secondary"><i data-lucide="user-check" size="16"></i> Sinkron Anggota</button>
+            <button class="btn btn-primary"><i data-lucide="external-link" size="16"></i> Undang Bot ke Server</button>
+        </section>
+
+        <!-- STATS SECTION -->
+        <section>
+            <div style="margin-bottom: 12px;">
+                <h2 style="font-size: 1.25rem; font-weight: 800;">Absensi Hari Ini</h2>
+                <span id="current-date" style="font-size: 0.8rem; color: var(--text-muted);">Sabtu, 24 Oktober 2026 · WIB</span>
+            </div>
+            <button class="btn btn-secondary" style="width: 100%; margin-bottom: 12px;"><i data-lucide="refresh-cw" size="16"></i> Segarkan</button>
+
+            <div class="grid-2">
+                <div class="stat-card">
+                    <div class="stat-icon blue"><i data-lucide="users" size="18"></i></div>
+                    <div class="stat-value" id="stat-total">160</div>
+                    <div class="stat-label">TOTAL ANGGOTA</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon green"><i data-lucide="check-circle-2" size="18"></i></div>
+                    <div class="stat-value" id="stat-hadir">16</div>
+                    <div class="stat-label">HADIR HARI INI</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon red"><i data-lucide="x-circle" size="18"></i></div>
+                    <div class="stat-value" id="stat-belum">144</div>
+                    <div class="stat-label">BELUM ABSEN</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon purple"><i data-lucide="percent" size="18"></i></div>
+                    <div class="stat-value" id="stat-persen">10%</div>
+                    <div class="stat-label">PERSENTASE</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SUDAH ABSEN -->
+        <section class="card">
+            <div class="section-header">
+                <span style="font-weight: 700; display: flex; align-items: center; gap: 6px;">
+                    <i data-lucide="check-circle-2" size="18" style="color: #4ade80;"></i> Sudah Absen
+                </span>
+                <span class="badge-count green" id="count-hadir">16</span>
+            </div>
+            <div class="member-list">
+                <div class="member-item">
+                    <div class="member-info">
+                        <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80" class="member-avatar" alt="avatar">
+                        <div class="member-details">
+                            <span class="member-name">[ADC PANGKOA...</span>
+                            <span class="member-handle">@adzkia_s_43046</span>
+                        </div>
+                    </div>
+                    <span class="status-badge green"><i data-lucide="check" size="14"></i> 11.54</span>
+                </div>
+                <div class="member-item">
+                    <div class="member-info">
+                        <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=100&q=80" class="member-avatar" alt="avatar">
+                        <div class="member-details">
+                            <span class="member-name">[ESCORTA] RAN...</span>
+                            <span class="member-handle">@ranoelsteven</span>
+                        </div>
+                    </div>
+                    <span class="status-badge green"><i data-lucide="check" size="14"></i> 11.54</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- BELUM ABSEN -->
+        <section class="card">
+            <div class="section-header">
+                <span style="font-weight: 700; display: flex; align-items: center; gap: 6px;">
+                    <i data-lucide="x-circle" size="18" style="color: #f87171;"></i> Belum Absen
+                </span>
+                <span class="badge-count red" id="count-belum">144</span>
+            </div>
+            <div class="form-group search-box">
+                <i data-lucide="search" size="16"></i>
+                <input type="text" class="form-input" placeholder="Cari anggota...">
+            </div>
+            <div class="member-list">
+                <div class="member-item">
+                    <div class="member-info">
+                        <img src="https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?auto=format&fit=crop&w=100&q=80" class="member-avatar" alt="avatar">
+                        <div class="member-details">
+                            <span class="member-name">AHKA97</span>
+                            <span class="member-handle">@heroxz8_</span>
+                        </div>
+                    </div>
+                    <span class="status-badge red"><i data-lucide="x" size="14"></i> belum</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- BOT CONFIGURATION -->
+        <section class="card">
+            <h2 class="card-header-title">Konfigurasi Bot</h2>
+            <div class="form-group">
+                <label class="form-label">BOT TOKEN <span style="color: #4ade80;">(tersimpan: ••••••••••••8-i8)</span></label>
+                <input type="password" class="form-input" value="Biarkan kosong bila tidak ingin mengubah">
+            </div>
+            <div class="form-group">
+                <label class="form-label">ID SERVER (GUILD ID)</label>
+                <input type="text" id="conf-server" class="form-input" value="1265517041725603951">
+            </div>
+            <div class="form-group">
+                <label class="form-label">ID CHANNEL ABSENSI</label>
+                <select class="form-select">
+                    <option># 📢 | absensi-personel</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">EMOJI ABSENSI</label>
+                <input type="text" class="form-input" value="✅" style="text-align: center; font-size: 1.2rem;">
+            </div>
+            <button class="btn btn-primary" onclick="saveConfig()" style="margin-top: 6px;"><i data-lucide="save" size="16"></i> Simpan & Hubungkan</button>
+        </section>
+
+        <!-- SETUP GUIDE -->
+        <section class="card">
+            <h2 class="card-header-title"><i data-lucide="key" size="20" style="color: #818cf8;"></i> Panduan Setup (5 langkah)</h2>
+            <div class="step-list">
+                 <div class="step-item">
+                    <div class="step-num">1</div>
+                    <div class="step-content">
+                        <span class="step-title">Buat aplikasi bot di Discord Developer Portal</span>
+                        <span class="step-desc">Buka discord.com/developers/applications → klik <strong>New Application</strong> → beri nama → Create.</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- REKAP BULANAN -->
+        <section>
+            <div class="grid-2" style="margin-bottom: 12px;">
+                <div class="stat-card">
+                    <div class="stat-icon blue"><i data-lucide="calendar" size="18"></i></div>
+                    <div class="stat-value">23</div>
+                    <div class="stat-label">HARI ABSENSI</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon green"><i data-lucide="flame" size="18"></i></div>
+                    <div class="stat-value">682</div>
+                    <div class="stat-label">TOTAL KEHADIRAN</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon purple"><i data-lucide="trending-up" size="18"></i></div>
+                    <div class="stat-value">29.7</div>
+                    <div class="stat-label">RATA-RATA / HARI</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon yellow"><i data-lucide="crown" size="18"></i></div>
+                    <div class="stat-value" style="font-size: 1.1rem; overflow: hidden; white-space: nowrap;">[ESCORT...</div>
+                    <div class="stat-label">PALING RAJIN</div>
+                </div>
+            </div>
+
+            <div class="card">
+                <span style="font-weight: 700; font-size: 1rem;">Top Kehadiran</span>
+                <canvas id="attendanceChart" height="180"></canvas>
+            </div>
+        </section>
+
+        <!-- KALENDER KEHADIRAN -->
+        <section class="card">
+            <div class="section-header">
+                <span style="font-weight: 700; font-size: 0.8rem; color: var(--text-muted);">ANGGOTA</span>
+                <span style="font-weight: 700; font-size: 0.8rem; color: var(--text-muted);">HADIR · KALENDER OKTOBER</span>
+            </div>
+            <div class="calendar-row">
+                <div class="member-details">
+                    <span class="member-name">taruna_akmil...</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <strong>23</strong>
+                    <div class="calendar-grid">
+                        <div class="cal-day active"></div><div class="cal-day active"></div><div class="cal-day active"></div><div class="cal-day active"></div><div class="cal-day active"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <nav class="tab-bar">
+        <a href="#" class="tab-item active"><i data-lucide="layout-dashboard" size="20"></i><span>Dashboard</span></a>
+        <a href="#" class="tab-item"><i data-lucide="users" size="20"></i><span>Anggota</span></a>
+        <a href="#" class="tab-item"><i data-lucide="calendar" size="20"></i><span>Rekap</span></a>
+        <a href="#" class="tab-item"><i data-lucide="settings" size="20"></i><span>Pengaturan</span></a>
+    </nav>
+
+    <script>
+        lucide.createIcons();
+
+        // Konfigurasi Firebase Firestore Kamu
+        const firebaseConfig = {
+            apiKey: "AIzaSyCTzd3iNonKD6OZDGYuIBMsOLzPmJ2iSmo",
+            authDomain: "absensi-koarmada.firebaseapp.com",
+            projectId: "absensi-koarmada",
+            storageBucket: "absensi-koarmada.firebasestorage.app",
+            messagingSenderId: "145088184284",
+            appId: "1:145088184284:web:5d1c6996b5fcbc7435d919",
+            measurementId: "G-DQWJ1M0EGQ"
+        };
+
+        // Inisialisasi Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        // Fungsi Simpan Konfigurasi ke Firestore
+        function saveConfig() {
+            const serverId = document.getElementById('conf-server').value;
+            db.collection("settings").doc("bot_config").set({
+                serverId: serverId,
+                updatedAt: new Date()
+            }, { merge: true }).then(() => {
+                alert('Konfigurasi berhasil disimpan ke Firestore!');
+            }).catch((error) => {
+                alert('Gagal menyimpan: ' + error.message);
+            });
+        }
+
+        // Ambil Data Real-time dari Firestore
+        db.collection("absensi_harian").doc("hari_ini").onSnapshot((doc) => {
+            if (doc.exists) {
+                const data = doc.data();
+                if(data.total_anggota) document.getElementById('stat-total').innerText = data.total_anggota;
+                if(data.hadir_count) {
+                    document.getElementById('stat-hadir').innerText = data.hadir_count;
+                    document.getElementById('count-hadir').innerText = data.hadir_count;
+                }
+                if(data.belum_count) {
+                    document.getElementById('stat-belum').innerText = data.belum_count;
+                    document.getElementById('count-belum').innerText = data.belum_count;
+                }
+                if(data.persentase) document.getElementById('stat-persen').innerText = data.persentase + '%';
+            }
+        });
+
+        // Chart Setup
+        const ctx = document.getElementById('attendanceChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: ['[ESCORTA] t...', '[MAGANG DIK...', '[PLH DANSAT...', '[PLT DANSAT...'],
+                datasets: [{
+                    data: [23, 23, 23, 23],
+                    backgroundColor: '#4f46e5',
+                    borderRadius: 8,
+                    barThickness: 12
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { grid: { color: '#21262d' }, ticks: { color: '#8b949e', font: { size: 10 } }, max: 24 },
+                    y: { grid: { display: false }, ticks: { color: '#f0f6fc', font: { size: 11, weight: '600' } } }
+                }
+            }
+        });
+
+        function toggleMenu() {
+            alert('Menu navigasi dibuka!');
+        }
+    </script>
+</body>
+</html>
