@@ -469,7 +469,7 @@
                 <div class="bot-meta">
                     <strong style="color: var(--text-main); font-size: 0.95rem;">Absensi#7539</strong>
                     <span><i data-lucide="server" size="12"></i> [RI] Komando Armada RI</span>
-                    <span><i data-lucide="users" size="12"></i> 141 anggota</span>
+                    <span><i data-lucide="users" size="12"></i> <span id="bot-total-members">141</span> anggota</span>
                 </div>
             </div>
             <button class="btn btn-secondary"><i data-lucide="refresh-cw" size="16"></i> Sambungkan</button>
@@ -481,89 +481,63 @@
         <section>
             <div style="margin-bottom: 12px;">
                 <h2 style="font-size: 1.25rem; font-weight: 800;">Absensi Hari Ini</h2>
-                <span id="current-date" style="font-size: 0.8rem; color: var(--text-muted);">Sabtu, 24 Oktober 2026 · WIB</span>
+                <span id="current-date" style="font-size: 0.8rem; color: var(--text-muted);">Memuat tanggal...</span>
             </div>
-            <button class="btn btn-secondary" style="width: 100%; margin-bottom: 12px;"><i data-lucide="refresh-cw" size="16"></i> Segarkan</button>
+            <button class="btn btn-secondary" style="width: 100%; margin-bottom: 12px;" onclick="location.reload()"><i data-lucide="refresh-cw" size="16"></i> Segarkan</button>
 
             <div class="grid-2">
                 <div class="stat-card">
                     <div class="stat-icon blue"><i data-lucide="users" size="18"></i></div>
-                    <div class="stat-value" id="stat-total">160</div>
+                    <div class="stat-value" id="stat-total">0</div>
                     <div class="stat-label">TOTAL ANGGOTA</div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-icon green"><i data-lucide="check-circle-2" size="18"></i></div>
-                    <div class="stat-value" id="stat-hadir">16</div>
+                    <div class="stat-value" id="stat-hadir">0</div>
                     <div class="stat-label">HADIR HARI INI</div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-icon red"><i data-lucide="x-circle" size="18"></i></div>
-                    <div class="stat-value" id="stat-belum">144</div>
+                    <div class="stat-value" id="stat-belum">0</div>
                     <div class="stat-label">BELUM ABSEN</div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-icon purple"><i data-lucide="percent" size="18"></i></div>
-                    <div class="stat-value" id="stat-persen">10%</div>
+                    <div class="stat-value" id="stat-persen">0%</div>
                     <div class="stat-label">PERSENTASE</div>
                 </div>
             </div>
         </section>
 
-        <!-- SUDAH ABSEN -->
+        <!-- SUDAH ABSEN (DINAMIS DARI FIRESTORE) -->
         <section class="card">
             <div class="section-header">
                 <span style="font-weight: 700; display: flex; align-items: center; gap: 6px;">
                     <i data-lucide="check-circle-2" size="18" style="color: #4ade80;"></i> Sudah Absen
                 </span>
-                <span class="badge-count green" id="count-hadir">16</span>
+                <span class="badge-count green" id="count-hadir">0</span>
             </div>
-            <div class="member-list">
-                <div class="member-item">
-                    <div class="member-info">
-                        <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80" class="member-avatar" alt="avatar">
-                        <div class="member-details">
-                            <span class="member-name">[ADC PANGKOA...</span>
-                            <span class="member-handle">@adzkia_s_43046</span>
-                        </div>
-                    </div>
-                    <span class="status-badge green"><i data-lucide="check" size="14"></i> 11.54</span>
-                </div>
-                <div class="member-item">
-                    <div class="member-info">
-                        <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=100&q=80" class="member-avatar" alt="avatar">
-                        <div class="member-details">
-                            <span class="member-name">[ESCORTA] RAN...</span>
-                            <span class="member-handle">@ranoelsteven</span>
-                        </div>
-                    </div>
-                    <span class="status-badge green"><i data-lucide="check" size="14"></i> 11.54</span>
-                </div>
+            <div class="member-list" id="container-sudah-absen">
+                <!-- Data dimasukkan otomatis lewat JavaScript dari Firestore -->
+                <div style="color: var(--text-muted); font-size: 0.85rem; text-align: center; padding: 10px;">Memuat data...</div>
             </div>
         </section>
 
-        <!-- BELUM ABSEN -->
+        <!-- BELUM ABSEN (DINAMIS DARI FIRESTORE DENGAN FITUR PENCARIAN) -->
         <section class="card">
             <div class="section-header">
                 <span style="font-weight: 700; display: flex; align-items: center; gap: 6px;">
                     <i data-lucide="x-circle" size="18" style="color: #f87171;"></i> Belum Absen
                 </span>
-                <span class="badge-count red" id="count-belum">144</span>
+                <span class="badge-count red" id="count-belum">0</span>
             </div>
             <div class="form-group search-box">
                 <i data-lucide="search" size="16"></i>
-                <input type="text" class="form-input" placeholder="Cari anggota...">
+                <input type="text" id="search-belum-input" class="form-input" placeholder="Cari anggota..." oninput="filterBelumAbsen()">
             </div>
-            <div class="member-list">
-                <div class="member-item">
-                    <div class="member-info">
-                        <img src="https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?auto=format&fit=crop&w=100&q=80" class="member-avatar" alt="avatar">
-                        <div class="member-details">
-                            <span class="member-name">AHKA97</span>
-                            <span class="member-handle">@heroxz8_</span>
-                        </div>
-                    </div>
-                    <span class="status-badge red"><i data-lucide="x" size="14"></i> belum</span>
-                </div>
+            <div class="member-list" id="container-belum-absen">
+                <!-- Data dimasukkan otomatis lewat JavaScript dari Firestore -->
+                <div style="color: var(--text-muted); font-size: 0.85rem; text-align: center; padding: 10px;">Memuat data...</div>
             </div>
         </section>
 
@@ -595,7 +569,7 @@
         <section class="card">
             <h2 class="card-header-title"><i data-lucide="key" size="20" style="color: #818cf8;"></i> Panduan Setup (5 langkah)</h2>
             <div class="step-list">
-                 <div class="step-item">
+                <div class="step-item">
                     <div class="step-num">1</div>
                     <div class="step-content">
                         <span class="step-title">Buat aplikasi bot di Discord Developer Portal</span>
@@ -615,6 +589,11 @@
                 </div>
                 <div class="stat-card">
                     <div class="stat-icon green"><i data-lucide="flame" size="18"></i></div>
+                    <div class="stat-value">682</div>
+                    <div class="stat-label">TOTAL KEHADIRAN</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon purple"><i data-lucide="trending-up" size="18"></i></i></div>
                     <div class="stat-value">682</div>
                     <div class="stat-label">TOTAL KEHADIRAN</div>
                 </div>
@@ -682,6 +661,93 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
 
+        // Variabel global buat nyimpen data belum absen supaya fitur pencarian (search) berfungsi lancar
+        let globalBelumAbsenData = [];
+
+        // Ambil Data Real-time dari Firestore
+        db.collection("absensi_harian").doc("hari_ini").onSnapshot((doc) => {
+            if (doc.exists) {
+                const data = doc.data();
+                
+                // Update Statistik Atas
+                const total = data.total_anggota || 0;
+                const hadir = data.hadir_count || (data.list_hadir ? data.list_hadir.length : 0);
+                const belum = data.belum_count || (data.list_belum ? data.list_belum.length : (total - hadir));
+                const persen = total > 0 ? Math.round((hadir / total) * 100) : 0;
+
+                document.getElementById('stat-total').innerText = total;
+                document.getElementById('stat-hadir').innerText = hadir;
+                document.getElementById('stat-belum').innerText = belum;
+                document.getElementById('stat-persen').innerText = persen + '%';
+                
+                document.getElementById('count-hadir').innerText = hadir;
+                document.getElementById('count-belum').innerText = belum;
+
+                // Render List Sudah Absen
+                const containerSudah = document.getElementById('container-sudah-absen');
+                containerSudah.innerHTML = '';
+                if (data.list_hadir && data.list_hadir.length > 0) {
+                    data.list_hadir.forEach(member => {
+                        containerSudah.innerHTML += `
+                            <div class="member-item">
+                                <div class="member-info">
+                                    <img src="${member.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80'}" class="member-avatar" alt="avatar">
+                                    <div class="member-details">
+                                        <span class="member-name">${member.name}</span>
+                                        <span class="member-handle">${member.handle}</span>
+                                    </div>
+                                </div>
+                                <span class="status-badge green"><i data-lucide="check" size="14"></i> ${member.time || '00.00'}</span>
+                            </div>
+                        `;
+                    });
+                } else {
+                    containerSudah.innerHTML = `<div style="color: var(--text-muted); font-size: 0.85rem; text-align: center; padding: 10px;">Belum ada yang absen hari ini.</div>`;
+                }
+
+                // Render List Belum Absen
+                globalBelumAbsenData = data.list_belum || [];
+                renderBelumAbsen(globalBelumAbsenData);
+
+                // Refresh ikon Lucide buat elemen yang baru di-render
+                lucide.createIcons();
+            }
+        });
+
+        // Fungsi Render List Belum Absen
+        function renderBelumAbsen(list) {
+            const containerBelum = document.getElementById('container-belum-absen');
+            containerBelum.innerHTML = '';
+            if (list && list.length > 0) {
+                list.forEach(member => {
+                    containerBelum.innerHTML += `
+                        <div class="member-item">
+                            <div class="member-info">
+                                <img src="${member.avatar || 'https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?auto=format&fit=crop&w=100&q=80'}" class="member-avatar" alt="avatar">
+                                <div class="member-details">
+                                    <span class="member-name">${member.name}</span>
+                                    <span class="member-handle">${member.handle}</span>
+                                </div>
+                            </div>
+                            <span class="status-badge red"><i data-lucide="x" size="14"></i> belum</span>
+                        </div>
+                    `;
+                });
+            } else {
+                containerBelum.innerHTML = `<div style="color: var(--text-muted); font-size: 0.85rem; text-align: center; padding: 10px;">Semua anggota sudah absen! 🎉</div>`;
+            }
+            lucide.createIcons();
+        }
+
+        // Fungsi Filter / Pencarian Anggota Belum Absen
+        function filterBelumAbsen() {
+            const keyword = document.getElementById('search-belum-input').value.toLowerCase();
+            const filtered = globalBelumAbsenData.filter(m => 
+                m.name.toLowerCase().includes(keyword) || m.handle.toLowerCase().includes(keyword)
+            );
+            renderBelumAbsen(filtered);
+        }
+
         // Fungsi Simpan Konfigurasi ke Firestore
         function saveConfig() {
             const serverId = document.getElementById('conf-server').value;
@@ -695,22 +761,11 @@
             });
         }
 
-        // Ambil Data Real-time dari Firestore
-        db.collection("absensi_harian").doc("hari_ini").onSnapshot((doc) => {
-            if (doc.exists) {
-                const data = doc.data();
-                if(data.total_anggota) document.getElementById('stat-total').innerText = data.total_anggota;
-                if(data.hadir_count) {
-                    document.getElementById('stat-hadir').innerText = data.hadir_count;
-                    document.getElementById('count-hadir').innerText = data.hadir_count;
-                }
-                if(data.belum_count) {
-                    document.getElementById('stat-belum').innerText = data.belum_count;
-                    document.getElementById('count-belum').innerText = data.belum_count;
-                }
-                if(data.persentase) document.getElementById('stat-persen').innerText = data.persentase + '%';
-            }
-        });
+        // Set Tanggal Hari Ini di Header
+        window.onload = () => {
+            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            document.getElementById('current-date').innerText = new Date().toLocaleDateString('id-ID', options) + ' · WIB';
+        };
 
         // Chart Setup
         const ctx = document.getElementById('attendanceChart').getContext('2d');
