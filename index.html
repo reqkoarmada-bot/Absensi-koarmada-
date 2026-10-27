@@ -1,799 +1,456 @@
+
 <!DOCTYPE html>
-<html lang="id">
+<html lang="id" class="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AbsensiRP - Dashboard Komando Armada RI</title>
+    <title>Dashboard Rekap Absensi Discord</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        discord: {
+                            bg: '#313338',
+                            card: '#2b2d31',
+                            dark: '#1e1f22',
+                            accent: '#5865f2',
+                            hover: '#4752c4'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
-    <!-- Google Fonts & Lucide Icons -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <script src="https://unpkg.com/lucide@latest"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-    <!-- Firebase SDK (Compat Version) -->
-    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
-
-    <style>
-        :root {
-            --bg-dark: #0d1117;
-            --bg-card: #161b22;
-            --bg-card-hover: #1f242d;
-            --border-color: #30363d;
-            --text-main: #f0f6fc;
-            --text-muted: #8b949e;
-            --accent-blue: #4f46e5;
-            --accent-blue-hover: #4338ca;
-            --accent-green: #238636;
-            --accent-green-bg: rgba(35, 134, 54, 0.15);
-            --accent-red: #da3633;
-            --accent-red-bg: rgba(218, 54, 51, 0.15);
-            --accent-purple: #8957e5;
-            --accent-yellow: #d29922;
-        }
-
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            font-family: 'Plus Jakarta Sans', sans-serif;
-            -webkit-tap-highlight-color: transparent;
-        }
-
-        body {
-            background-color: var(--bg-dark);
-            color: var(--text-main);
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-
-        .navbar {
-            width: 100%;
-            max-width: 480px;
-            background-color: #161b22;
-            padding: 12px 16px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 1px solid var(--border-color);
-            position: sticky;
-            top: 0;
-            z-index: 100;
-        }
-
-        .brand {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-
-        .brand-logo {
-            background-color: var(--accent-blue);
-            width: 36px;
-            height: 36px;
-            border-radius: 8px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            color: white;
-            box-shadow: 0 2px 8px rgba(79, 70, 229, 0.4);
-        }
-
-        .brand-title {
-            font-size: 1.1rem;
-            font-weight: 700;
-            letter-spacing: -0.3px;
-        }
-
-        .menu-btn {
-            background: none;
-            border: none;
-            color: var(--text-main);
-            cursor: pointer;
-            padding: 4px;
-            border-radius: 6px;
-        }
-
-        .app-container {
-            width: 100%;
-            max-width: 480px;
-            padding: 16px;
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-            padding-bottom: 80px;
-        }
-
-        .card {
-            background-color: var(--bg-card);
-            border: 1px solid var(--border-color);
-            border-radius: 16px;
-            padding: 18px;
-            display: flex;
-            flex-direction: column;
-            gap: 14px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
-        }
-
-        .card-header-title {
-            font-size: 1.25rem;
-            font-weight: 800;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .grid-2 {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 12px;
-        }
-
-        .stat-card {
-            background-color: var(--bg-card);
-            border: 1px solid var(--border-color);
-            border-radius: 16px;
-            padding: 16px;
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-
-        .stat-icon {
-            width: 36px;
-            height: 36px;
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-bottom: 4px;
-        }
-
-        .stat-icon.blue { background-color: rgba(79, 70, 229, 0.15); color: #818cf8; }
-        .stat-icon.green { background-color: var(--accent-green-bg); color: #4ade80; }
-        .stat-icon.red { background-color: var(--accent-red-bg); color: #f87171; }
-        .stat-icon.purple { background-color: rgba(137, 87, 229, 0.15); color: #c084fc; }
-        .stat-icon.yellow { background-color: rgba(210, 153, 34, 0.15); color: #facc15; }
-
-        .stat-value {
-            font-size: 1.8rem;
-            font-weight: 800;
-            line-height: 1;
-        }
-
-        .stat-label {
-            font-size: 0.72rem;
-            font-weight: 700;
-            color: var(--text-muted);
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        .bot-status-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .badge-online {
-            background-color: rgba(35, 134, 54, 0.2);
-            color: #4ade80;
-            padding: 4px 10px;
-            border-radius: 20px;
-            font-size: 0.75rem;
-            font-weight: 600;
-            border: 1px solid rgba(74, 222, 128, 0.3);
-        }
-
-        .bot-info-row {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-
-        .bot-avatar {
-            width: 42px;
-            height: 42px;
-            border-radius: 50%;
-            background-color: var(--accent-blue);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 700;
-            font-size: 0.9rem;
-        }
-
-        .bot-meta {
-            display: flex;
-            flex-direction: column;
-            gap: 2px;
-            font-size: 0.85rem;
-            color: var(--text-muted);
-        }
-
-        .bot-meta span {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-
-        .form-group {
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-        }
-
-        .form-label {
-            font-size: 0.75rem;
-            font-weight: 700;
-            color: var(--text-muted);
-            text-transform: uppercase;
-        }
-
-        .form-input, .form-select {
-            background-color: #0d1117;
-            border: 1px solid var(--border-color);
-            color: var(--text-main);
-            padding: 12px;
-            border-radius: 10px;
-            font-size: 0.9rem;
-            outline: none;
-            width: 100%;
-        }
-
-        .btn {
-            padding: 12px;
-            border-radius: 10px;
-            border: none;
-            font-weight: 600;
-            font-size: 0.9rem;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            transition: all 0.2s;
-        }
-
-        .btn-primary { background-color: var(--accent-blue); color: white; }
-        .btn-secondary { background-color: #21262d; color: var(--text-main); border: 1px solid var(--border-color); }
-
-        .section-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 4px;
-        }
-
-        .badge-count {
-            padding: 2px 8px;
-            border-radius: 12px;
-            font-size: 0.75rem;
-            font-weight: 700;
-        }
-
-        .badge-count.green { background-color: var(--accent-green-bg); color: #4ade80; }
-        .badge-count.red { background-color: var(--accent-red-bg); color: #f87171; }
-
-        .search-box {
-            position: relative;
-        }
-
-        .search-box i {
-            position: absolute;
-            left: 10px;
-            top: 50%;
-            transform: translateY(-50%);
-            color: var(--text-muted);
-        }
-
-        .search-box input {
-            padding-left: 34px;
-        }
-
-        .member-list {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            max-height: 280px;
-            overflow-y: auto;
-            padding-right: 4px;
-        }
-
-        .member-item {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 8px 0;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-        }
-
-        .member-info {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .member-avatar {
-            width: 36px;
-            height: 36px;
-            border-radius: 50%;
-            object-fit: cover;
-            background-color: #30363d;
-        }
-
-        .member-details {
-            display: flex;
-            flex-direction: column;
-        }
-
-        .member-name {
-            font-size: 0.85rem;
-            font-weight: 600;
-            max-width: 180px;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        .member-handle {
-            font-size: 0.75rem;
-            color: var(--text-muted);
-        }
-
-        .status-badge {
-            font-size: 0.75rem;
-            display: flex;
-            align-items: center;
-            gap: 4px;
-            font-weight: 600;
-        }
-
-        .status-badge.green { color: #4ade80; }
-        .status-badge.red { color: #f87171; }
-
-        .step-list {
-            display: flex;
-            flex-direction: column;
-            gap: 14px;
-        }
-
-        .step-item {
-            display: flex;
-            gap: 12px;
-        }
-
-        .step-num {
-            width: 24px;
-            height: 24px;
-            border-radius: 50%;
-            background-color: rgba(79, 70, 229, 0.2);
-            color: #818cf8;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 0.75rem;
-            font-weight: 700;
-            flex-shrink: 0;
-            margin-top: 2px;
-        }
-
-        .step-content {
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-            font-size: 0.85rem;
-        }
-
-        .step-title { font-weight: 700; color: var(--text-main); }
-        .step-desc { color: var(--text-muted); line-height: 1.4; font-size: 0.8rem; }
-
-        .calendar-row {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 8px 0;
-        }
-
-        .calendar-grid {
-            display: grid;
-            grid-template-columns: repeat(7, 1fr);
-            gap: 4px;
-        }
-
-        .cal-day {
-            width: 10px;
-            height: 10px;
-            border-radius: 2px;
-            background-color: #21262d;
-        }
-
-        .cal-day.active { background-color: #238636; }
-
-        .tab-bar {
-            position: fixed;
-            bottom: 0;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 100%;
-            max-width: 480px;
-            background-color: #161b22;
-            border-top: 1px solid var(--border-color);
-            display: flex;
-            justify-content: space-around;
-            padding: 10px 0;
-            z-index: 100;
-        }
-
-        .tab-item {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 4px;
-            color: var(--text-muted);
-            font-size: 0.65rem;
-            font-weight: 600;
-            text-decoration: none;
-            cursor: pointer;
-        }
-
-        .tab-item.active { color: #818cf8; }
-    </style>
+    <!-- Firebase SDK (v9 Modular Compat) -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
 </head>
-<body>
+<body class="bg-discord-dark text-gray-100 font-sans min-h-screen pb-12">
 
-    <header class="navbar">
-        <div class="brand">
-            <div class="brand-logo">
-                <i data-lucide="shield-check" size="20"></i>
+    <!-- Header / Navbar -->
+    <nav class="bg-discord-card border-b border-gray-700/50 sticky top-0 z-50 backdrop-blur-md bg-opacity-90">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="bg-discord-accent p-2 rounded-xl shadow-lg shadow-discord-accent/30">
+                    <i class="fa-brands font-bold fa-discord text-2xl text-white"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold tracking-wide">Absensi Discord Pro</h1>
+                    <p class="text-xs text-gray-400">Rekap Otomatis Reactions & Sync Firestore</p>
+                </div>
             </div>
-            <span class="brand-title">AbsensiRP</span>
+            <div id="statusBadge" class="flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs px-3 py-1.5 rounded-full">
+                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+                <span>Firestore Ready</span>
+            </div>
         </div>
-        <button class="menu-btn" onclick="toggleMenu()"><i data-lucide="menu" size="22"></i></button>
-    </header>
-
-    <main class="app-container">
-
-        <!-- BOT STATUS CARD -->
-        <section class="card">
-            <div class="bot-status-header">
-                <span style="font-size: 1.1rem; font-weight: 700;">Status Bot</span>
-                <span class="badge-online">Terhubung</span>
-            </div>
-            <div class="bot-info-row">
-                <div class="bot-avatar">AB</div>
-                <div class="bot-meta">
-                    <strong style="color: var(--text-main); font-size: 0.95rem;">Absensi#7539</strong>
-                    <span><i data-lucide="server" size="12"></i> [RI] Komando Armada RI</span>
-                    <span><i data-lucide="users" size="12"></i> <span id="bot-total-members">141</span> anggota</span>
-                </div>
-            </div>
-            <button class="btn btn-secondary"><i data-lucide="refresh-cw" size="16"></i> Sambungkan</button>
-            <button class="btn btn-secondary"><i data-lucide="user-check" size="16"></i> Sinkron Anggota</button>
-            <button class="btn btn-primary"><i data-lucide="external-link" size="16"></i> Undang Bot ke Server</button>
-        </section>
-
-        <!-- STATS SECTION -->
-        <section>
-            <div style="margin-bottom: 12px;">
-                <h2 style="font-size: 1.25rem; font-weight: 800;">Absensi Hari Ini</h2>
-                <span id="current-date" style="font-size: 0.8rem; color: var(--text-muted);">Memuat tanggal...</span>
-            </div>
-            <button class="btn btn-secondary" style="width: 100%; margin-bottom: 12px;" onclick="location.reload()"><i data-lucide="refresh-cw" size="16"></i> Segarkan</button>
-
-            <div class="grid-2">
-                <div class="stat-card">
-                    <div class="stat-icon blue"><i data-lucide="users" size="18"></i></div>
-                    <div class="stat-value" id="stat-total">0</div>
-                    <div class="stat-label">TOTAL ANGGOTA</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-icon green"><i data-lucide="check-circle-2" size="18"></i></div>
-                    <div class="stat-value" id="stat-hadir">0</div>
-                    <div class="stat-label">HADIR HARI INI</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-icon red"><i data-lucide="x-circle" size="18"></i></div>
-                    <div class="stat-value" id="stat-belum">0</div>
-                    <div class="stat-label">BELUM ABSEN</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-icon purple"><i data-lucide="percent" size="18"></i></div>
-                    <div class="stat-value" id="stat-persen">0%</div>
-                    <div class="stat-label">PERSENTASE</div>
-                </div>
-            </div>
-        </section>
-
-        <!-- SUDAH ABSEN (DINAMIS DARI FIRESTORE) -->
-        <section class="card">
-            <div class="section-header">
-                <span style="font-weight: 700; display: flex; align-items: center; gap: 6px;">
-                    <i data-lucide="check-circle-2" size="18" style="color: #4ade80;"></i> Sudah Absen
-                </span>
-                <span class="badge-count green" id="count-hadir">0</span>
-            </div>
-            <div class="member-list" id="container-sudah-absen">
-                <!-- Data dimasukkan otomatis lewat JavaScript dari Firestore -->
-                <div style="color: var(--text-muted); font-size: 0.85rem; text-align: center; padding: 10px;">Memuat data...</div>
-            </div>
-        </section>
-
-        <!-- BELUM ABSEN (DINAMIS DARI FIRESTORE DENGAN FITUR PENCARIAN) -->
-        <section class="card">
-            <div class="section-header">
-                <span style="font-weight: 700; display: flex; align-items: center; gap: 6px;">
-                    <i data-lucide="x-circle" size="18" style="color: #f87171;"></i> Belum Absen
-                </span>
-                <span class="badge-count red" id="count-belum">0</span>
-            </div>
-            <div class="form-group search-box">
-                <i data-lucide="search" size="16"></i>
-                <input type="text" id="search-belum-input" class="form-input" placeholder="Cari anggota..." oninput="filterBelumAbsen()">
-            </div>
-            <div class="member-list" id="container-belum-absen">
-                <!-- Data dimasukkan otomatis lewat JavaScript dari Firestore -->
-                <div style="color: var(--text-muted); font-size: 0.85rem; text-align: center; padding: 10px;">Memuat data...</div>
-            </div>
-        </section>
-
-        <!-- BOT CONFIGURATION -->
-        <section class="card">
-            <h2 class="card-header-title">Konfigurasi Bot</h2>
-            <div class="form-group">
-                <label class="form-label">BOT TOKEN <span style="color: #4ade80;">(tersimpan: ••••••••••••8-i8)</span></label>
-                <input type="password" class="form-input" value="Biarkan kosong bila tidak ingin mengubah">
-            </div>
-            <div class="form-group">
-                <label class="form-label">ID SERVER (GUILD ID)</label>
-                <input type="text" id="conf-server" class="form-input" value="1265517041725603951">
-            </div>
-            <div class="form-group">
-                <label class="form-label">ID CHANNEL ABSENSI</label>
-                <select class="form-select">
-                    <option># 📢 | absensi-personel</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label class="form-label">EMOJI ABSENSI</label>
-                <input type="text" class="form-input" value="✅" style="text-align: center; font-size: 1.2rem;">
-            </div>
-            <button class="btn btn-primary" onclick="saveConfig()" style="margin-top: 6px;"><i data-lucide="save" size="16"></i> Simpan & Hubungkan</button>
-        </section>
-
-        <!-- SETUP GUIDE -->
-        <section class="card">
-            <h2 class="card-header-title"><i data-lucide="key" size="20" style="color: #818cf8;"></i> Panduan Setup (5 langkah)</h2>
-            <div class="step-list">
-                <div class="step-item">
-                    <div class="step-num">1</div>
-                    <div class="step-content">
-                        <span class="step-title">Buat aplikasi bot di Discord Developer Portal</span>
-                        <span class="step-desc">Buka discord.com/developers/applications → klik <strong>New Application</strong> → beri nama → Create.</span>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- REKAP BULANAN -->
-        <section>
-            <div class="grid-2" style="margin-bottom: 12px;">
-                <div class="stat-card">
-                    <div class="stat-icon blue"><i data-lucide="calendar" size="18"></i></div>
-                    <div class="stat-value">23</div>
-                    <div class="stat-label">HARI ABSENSI</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-icon green"><i data-lucide="flame" size="18"></i></div>
-                    <div class="stat-value">682</div>
-                    <div class="stat-label">TOTAL KEHADIRAN</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-icon purple"><i data-lucide="trending-up" size="18"></i></i></div>
-                    <div class="stat-value">682</div>
-                    <div class="stat-label">TOTAL KEHADIRAN</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-icon purple"><i data-lucide="trending-up" size="18"></i></div>
-                    <div class="stat-value">29.7</div>
-                    <div class="stat-label">RATA-RATA / HARI</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-icon yellow"><i data-lucide="crown" size="18"></i></div>
-                    <div class="stat-value" style="font-size: 1.1rem; overflow: hidden; white-space: nowrap;">[ESCORT...</div>
-                    <div class="stat-label">PALING RAJIN</div>
-                </div>
-            </div>
-
-            <div class="card">
-                <span style="font-weight: 700; font-size: 1rem;">Top Kehadiran</span>
-                <canvas id="attendanceChart" height="180"></canvas>
-            </div>
-        </section>
-
-        <!-- KALENDER KEHADIRAN -->
-        <section class="card">
-            <div class="section-header">
-                <span style="font-weight: 700; font-size: 0.8rem; color: var(--text-muted);">ANGGOTA</span>
-                <span style="font-weight: 700; font-size: 0.8rem; color: var(--text-muted);">HADIR · KALENDER OKTOBER</span>
-            </div>
-            <div class="calendar-row">
-                <div class="member-details">
-                    <span class="member-name">taruna_akmil...</span>
-                </div>
-                <div style="display: flex; align-items: center; gap: 12px;">
-                    <strong>23</strong>
-                    <div class="calendar-grid">
-                        <div class="cal-day active"></div><div class="cal-day active"></div><div class="cal-day active"></div><div class="cal-day active"></div><div class="cal-day active"></div>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-    </main>
-
-    <nav class="tab-bar">
-        <a href="#" class="tab-item active"><i data-lucide="layout-dashboard" size="20"></i><span>Dashboard</span></a>
-        <a href="#" class="tab-item"><i data-lucide="users" size="20"></i><span>Anggota</span></a>
-        <a href="#" class="tab-item"><i data-lucide="calendar" size="20"></i><span>Rekap</span></a>
-        <a href="#" class="tab-item"><i data-lucide="settings" size="20"></i><span>Pengaturan</span></a>
     </nav>
 
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8 space-y-6">
+
+        <!-- Top Panel: Configuration -->
+        <div class="bg-discord-card border border-gray-700/60 rounded-2xl p-6 shadow-xl">
+            <h2 class="text-lg font-semibold mb-4 flex items-center gap-2 text-discord-accent">
+                <i class="fa-solid fa-sliders"></i> Pengaturan Webhook & Discord Target
+            </h2>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Webhook URL (Opsional / Recommended)</label>
+                    <input type="text" id="inputWebhookUrl" class="w-full bg-discord-bg border border-gray-700 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-discord-accent transition text-gray-300" placeholder="https://discord.com/api/webhooks/...">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Channel ID Absensi</label>
+                    <input type="text" id="inputChannelId" class="w-full bg-discord-bg border border-gray-700 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-discord-accent transition text-gray-300" placeholder="Contoh: 987654321098765432">
+                </div>
+            </div>
+
+            <div class="mt-4">
+                <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Bot Token</label>
+                <input type="password" id="inputBotToken" class="w-full bg-discord-bg border border-gray-700 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-discord-accent transition text-gray-300" placeholder="Bot Token Discord">
+            </div>
+
+            <div class="mt-6 flex flex-wrap items-center justify-between gap-4">
+                <div class="text-xs text-gray-400 flex items-center gap-2">
+                    <i class="fa-solid fa-bolt text-amber-400"></i>
+                    <span>Masukkan <b>Webhook URL</b> agar terbebas 100% dari CORS Error.</span>
+                </div>
+                
+                <button id="btnFetch" onclick="fetchAndProcessAttendance()" class="bg-discord-accent hover:bg-discord-hover text-white font-medium px-6 py-2.5 rounded-xl shadow-lg shadow-discord-accent/30 transition-all flex items-center gap-2 text-sm active:scale-95 cursor-pointer">
+                    <i class="fa-solid fa-arrows-rotate" id="btnSpinner"></i>
+                    <span>Tarik & Rekap Absensi</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Notification Alert Box -->
+        <div id="alertBox" class="hidden rounded-xl p-4 text-sm flex items-center gap-3 border transition-all">
+            <i id="alertIcon" class="fa-solid text-lg"></i>
+            <span id="alertMessage"></span>
+        </div>
+
+        <!-- Main Content: Tabs & Data Table -->
+        <div class="bg-discord-card border border-gray-700/60 rounded-2xl shadow-xl overflow-hidden">
+            <!-- Tabs Header -->
+            <div class="flex items-center justify-between border-b border-gray-700/60 px-6 pt-4 bg-discord-dark/50">
+                <div class="flex gap-4">
+                    <button onclick="switchTab('live')" id="tabLive" class="border-b-2 border-discord-accent pb-3 px-2 font-medium text-sm text-discord-accent flex items-center gap-2 transition">
+                        <i class="fa-solid fa-bolt"></i> Hasil Tarik Hari Ini (<span id="countLive">0</span>)
+                    </button>
+                    <button onclick="switchTab('db')" id="tabDb" class="border-b-2 border-transparent pb-3 px-2 font-medium text-sm text-gray-400 hover:text-gray-200 flex items-center gap-2 transition">
+                        <i class="fa-solid fa-database"></i> Database Firestore (<span id="countDb">0</span>)
+                    </button>
+                </div>
+                <div class="pb-3">
+                    <input type="text" id="searchInput" onkeyup="filterTable()" placeholder="Cari Anggota..." class="bg-discord-bg border border-gray-700 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-discord-accent text-gray-300 w-48">
+                </div>
+            </div>
+
+            <!-- Table Container -->
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-sm text-gray-300">
+                    <thead class="bg-discord-dark/80 uppercase text-xs text-gray-400 border-b border-gray-700/60">
+                        <tr>
+                            <th class="py-3.5 px-6">Anggota Discord</th>
+                            <th class="py-3.5 px-6">User ID</th>
+                            <th class="py-3.5 px-6">Emoji Absen</th>
+                            <th class="py-3.5 px-6">Waktu / Tanggal Absen</th>
+                            <th class="py-3.5 px-6">Status Rekap</th>
+                        </tr>
+                    </thead>
+                    <tbody id="attendanceTableBody" class="divide-y divide-gray-700/40">
+                        <!-- Dynamic Rows Here -->
+                        <tr>
+                            <td colspan="5" class="text-center py-12 text-gray-500">
+                                <i class="fa-solid fa-inbox text-4xl mb-3 block opacity-40"></i>
+                                Belum ada data absensi ditarik. Klik tombol <b>"Tarik & Rekap Absensi"</b> di atas.
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- JavaScript App Engine -->
     <script>
-        lucide.createIcons();
-
-        // Konfigurasi Firebase Firestore Kamu
-        const firebaseConfig = {
-            apiKey: "AIzaSyCTzd3iNonKD6OZDGYuIBMsOLzPmJ2iSmo",
-            authDomain: "absensi-koarmada.firebaseapp.com",
-            projectId: "absensi-koarmada",
-            storageBucket: "absensi-koarmada.firebasestorage.app",
-            messagingSenderId: "145088184284",
-            appId: "1:145088184284:web:5d1c6996b5fcbc7435d919",
-            measurementId: "G-DQWJ1M0EGQ"
-        };
-
-        // Inisialisasi Firebase
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.firestore();
-
-        // Variabel global buat nyimpen data belum absen supaya fitur pencarian (search) berfungsi lancar
-        let globalBelumAbsenData = [];
-
-        // Ambil Data Real-time dari Firestore
-        db.collection("absensi_harian").doc("hari_ini").onSnapshot((doc) => {
-            if (doc.exists) {
-                const data = doc.data();
-                
-                // Update Statistik Atas
-                const total = data.total_anggota || 0;
-                const hadir = data.hadir_count || (data.list_hadir ? data.list_hadir.length : 0);
-                const belum = data.belum_count || (data.list_belum ? data.list_belum.length : (total - hadir));
-                const persen = total > 0 ? Math.round((hadir / total) * 100) : 0;
-
-                document.getElementById('stat-total').innerText = total;
-                document.getElementById('stat-hadir').innerText = hadir;
-                document.getElementById('stat-belum').innerText = belum;
-                document.getElementById('stat-persen').innerText = persen + '%';
-                
-                document.getElementById('count-hadir').innerText = hadir;
-                document.getElementById('count-belum').innerText = belum;
-
-                // Render List Sudah Absen
-                const containerSudah = document.getElementById('container-sudah-absen');
-                containerSudah.innerHTML = '';
-                if (data.list_hadir && data.list_hadir.length > 0) {
-                    data.list_hadir.forEach(member => {
-                        containerSudah.innerHTML += `
-                            <div class="member-item">
-                                <div class="member-info">
-                                    <img src="${member.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80'}" class="member-avatar" alt="avatar">
-                                    <div class="member-details">
-                                        <span class="member-name">${member.name}</span>
-                                        <span class="member-handle">${member.handle}</span>
-                                    </div>
-                                </div>
-                                <span class="status-badge green"><i data-lucide="check" size="14"></i> ${member.time || '00.00'}</span>
-                            </div>
-                        `;
-                    });
-                } else {
-                    containerSudah.innerHTML = `<div style="color: var(--text-muted); font-size: 0.85rem; text-align: center; padding: 10px;">Belum ada yang absen hari ini.</div>`;
-                }
-
-                // Render List Belum Absen
-                globalBelumAbsenData = data.list_belum || [];
-                renderBelumAbsen(globalBelumAbsenData);
-
-                // Refresh ikon Lucide buat elemen yang baru di-render
-                lucide.createIcons();
-            }
+        // 1. Firebase Firestore Setup
+        // Auto Load Saved Inputs
+        window.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('inputBotToken').value = localStorage.getItem('disc_bot_token') || "MTU2MzE3MTc2NDIyMDA3MjA5Ng.GhBImC.ZtYxPU0I5KZMPfVB7B_rbuSUKh_TPqhmZ7L99Y";
+            document.getElementById('inputChannelId').value = localStorage.getItem('disc_channel_id') || "";
+            document.getElementById('inputWebhookUrl').value = localStorage.getItem('disc_webhook_url') || "";
+            
+            loadFirestoreData();
         });
 
-        // Fungsi Render List Belum Absen
-        function renderBelumAbsen(list) {
-            const containerBelum = document.getElementById('container-belum-absen');
-            containerBelum.innerHTML = '';
-            if (list && list.length > 0) {
-                list.forEach(member => {
-                    containerBelum.innerHTML += `
-                        <div class="member-item">
-                            <div class="member-info">
-                                <img src="${member.avatar || 'https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?auto=format&fit=crop&w=100&q=80'}" class="member-avatar" alt="avatar">
-                                <div class="member-details">
-                                    <span class="member-name">${member.name}</span>
-                                    <span class="member-handle">${member.handle}</span>
-                                </div>
-                            </div>
-                            <span class="status-badge red"><i data-lucide="x" size="14"></i> belum</span>
-                        </div>
-                    `;
-                });
-            } else {
-                containerBelum.innerHTML = `<div style="color: var(--text-muted); font-size: 0.85rem; text-align: center; padding: 10px;">Semua anggota sudah absen! 🎉</div>`;
+        // Combined Smart Fetch Engine (Supports Webhook Gateway Direct Fetch)
+        async function fetchDiscordAPI(endpoint, token) {
+            const webhookUrl = document.getElementById('inputWebhookUrl').value.trim();
+            const directUrl = `https://discord.com/api/v10/${endpoint}`;
+            
+            // If Webhook provided, test execution/ping first
+            if (webhookUrl && endpoint.includes('messages')) {
+                try {
+                    const res = await fetch(webhookUrl);
+                    if (res.ok) {
+                        const whData = await res.json();
+                        if (whData.channel_id) {
+                            // Fetch via Webhook Channel endpoint
+                            const whFetchUrl = `https://discord.com/api/v10/channels/${whData.channel_id}/messages?limit=10`;
+                            const whRes = await fetch(whFetchUrl, { headers: { 'Authorization': `Bot ${token}` } });
+                            if (whRes.ok) return await whRes.json();
+                        }
+                    }
+                } catch (e) {
+                    console.log("Webhook fetch bypass attempt...");
+                }
             }
-            lucide.createIcons();
+
+            // Public Proxy Fallbacks
+            const proxyUrls = [
+                `https://api.allorigins.win/raw?url=${encodeURIComponent(directUrl)}`,
+                `https://corsproxy.io/?${encodeURIComponent(directUrl)}`
+            ];
+
+            for (const pUrl of proxyUrls) {
+                try {
+                    const res = await fetch(pUrl, {
+                        headers: { 'Authorization': `Bot ${token}` }
+                    });
+                    if (res.ok) return await res.json();
+                } catch (err) {
+                    continue;
+                }
+            }
+
+            throw new Error("Gagal mengambil data dari Discord. Pastikan Token Bot / Webhook valid!");
         }
 
-        // Fungsi Filter / Pencarian Anggota Belum Absen
-        function filterBelumAbsen() {
-            const keyword = document.getElementById('search-belum-input').value.toLowerCase();
-            const filtered = globalBelumAbsenData.filter(m => 
-                m.name.toLowerCase().includes(keyword) || m.handle.toLowerCase().includes(keyword)
-            );
-            renderBelumAbsen(filtered);
+        // Global States
+        let currentLiveData = [];
+        let currentDbData = [];
+        let activeTab = 'live';
+
+        // Auto Load Token & Saved IDs from localStorage
+        window.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('inputBotToken').value = localStorage.getItem('disc_bot_token') || "MTU2MzE3MTc2NDIyMDA3MjA5Ng.GhBImC.ZtYxPU0I5KZMPfVB7B_rbuSUKh_TPqhmZ7L99Y";
+            document.getElementById('inputServerId').value = localStorage.getItem('disc_server_id') || "";
+            document.getElementById('inputChannelId').value = localStorage.getItem('disc_channel_id') || "";
+            
+            // Initial load from Firestore
+            loadFirestoreData();
+        });
+
+        // Smart Discord API Fetcher (Multi-Bypass Engine)
+        async function fetchDiscordAPI(endpoint, token) {
+            const proxies = [
+                (url) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+                (url) => `https://corsproxy.io/?${encodeURIComponent(url)}`
+            ];
+
+            const directUrl = `https://discord.com/api/v10/${endpoint}`;
+            const headers = { 'Authorization': `Bot ${token}` };
+
+            // 1. Try Direct First
+            try {
+                const res = await fetch(directUrl, { headers });
+                if (res.ok) return await res.json();
+            } catch (err) {
+                console.warn("Direct fetch blocked by CORS, switching to proxy bypass...");
+            }
+
+            // 2. Try Proxies
+            for (const proxyFn of proxies) {
+                try {
+                    const proxyUrl = proxyFn(directUrl);
+                    const res = await fetch(proxyUrl, { headers });
+                    if (res.ok) {
+                        return await res.json();
+                    }
+                } catch (e) {
+                    console.warn("Proxy attempt failed, trying next...");
+                }
+            }
+
+            throw new Error("Gagal terhubung ke Discord API. Pastikan Token Bot & Channel ID benar!");
         }
 
-        // Fungsi Simpan Konfigurasi ke Firestore
-        function saveConfig() {
-            const serverId = document.getElementById('conf-server').value;
-            db.collection("settings").doc("bot_config").set({
-                serverId: serverId,
-                updatedAt: new Date()
-            }, { merge: true }).then(() => {
-                alert('Konfigurasi berhasil disimpan ke Firestore!');
-            }).catch((error) => {
-                alert('Gagal menyimpan: ' + error.message);
+        // Main Fetch & Rekap Function
+        async function fetchAndProcessAttendance() {
+            const token = document.getElementById('inputBotToken').value.trim();
+            const channelId = document.getElementById('inputChannelId').value.trim();
+            const serverId = document.getElementById('inputServerId').value.trim();
+
+            if (!token || !channelId) {
+                showAlert('Harap isi Bot Token dan Channel ID Absensi terlebih dahulu!', 'error');
+                return;
+            }
+
+            // Save to Local Storage for user convenience
+            localStorage.setItem('disc_bot_token', token);
+            localStorage.setItem('disc_channel_id', channelId);
+            localStorage.setItem('disc_server_id', serverId);
+
+            setLoading(true);
+
+            try {
+                // 1. Fetch Last Messages from Attendance Channel
+                const messages = await fetchDiscordAPI(`channels/${channelId}/messages?limit=10`, token);
+
+                if (!messages || messages.length === 0) {
+                    showAlert('Tidak ada pesan ditemukan di channel absensi tersebut.', 'warning');
+                    setLoading(false);
+                    return;
+                }
+
+                let attendanceList = [];
+                let processedUserIds = new Set();
+
+                // 2. Scan reactions across messages
+                for (const msg of messages) {
+                    if (msg.reactions && msg.reactions.length > 0) {
+                        for (const rx of msg.reactions) {
+                            const emojiParam = rx.emoji.id ? `${rx.emoji.name}:${rx.emoji.id}` : encodeURIComponent(rx.emoji.name);
+                            
+                            // Get users who reacted
+                            const users = await fetchDiscordAPI(`channels/${channelId}/messages/${msg.id}/reactions/${emojiParam}`, token);
+
+                            for (const u of users) {
+                                if (u.bot || processedUserIds.has(u.id)) continue;
+                                processedUserIds.add(u.id);
+
+                                // Construct Discord Avatar CDN URL
+                                const avatarUrl = u.avatar 
+                                    ? `https://cdn.discordapp.com/avatars/${u.id}/${u.avatar}.png?size=128`
+                                    : `https://cdn.discordapp.com/embed/avatars/${(BigInt(u.id) >> 22n) % 5n}.png`;
+
+                                const record = {
+                                    userId: u.id,
+                                    username: u.global_name || u.username,
+                                    tag: `${u.username}`,
+                                    avatar: avatarUrl,
+                                    emoji: rx.emoji.name,
+                                    timestamp: new Date(msg.timestamp).toLocaleString('id-ID'),
+                                    dateKey: new Date().toISOString().split('T')[0]
+                                };
+
+                                attendanceList.push(record);
+
+                                // Save/Update to Firestore
+                                if (db) {
+                                    await db.collection('absensi_rekap').doc(`${record.dateKey}_${record.userId}`).set(record, { merge: true });
+                                }
+                            }
+                        }
+                    }
+                }
+
+                currentLiveData = attendanceList;
+                document.getElementById('countLive').innerText = attendanceList.length;
+
+                if (attendanceList.length === 0) {
+                    showAlert('Berhasil terhubung, tapi tidak ada reaction anggota di pesan absensi!', 'warning');
+                } else {
+                    showAlert(`Berhasil merekap ${attendanceList.length} anggota & tersimpan ke Firestore!`, 'success');
+                }
+
+                switchTab('live');
+                loadFirestoreData();
+
+            } catch (err) {
+                console.error(err);
+                showAlert(err.message || 'Gagal mengambil data dari Discord.', 'error');
+            } finally {
+                setLoading(false);
+            }
+        }
+
+        // Fetch Firestore Database Logs
+        async function loadFirestoreData() {
+            if (!db) return;
+            try {
+                const snapshot = await db.collection('absensi_rekap').get();
+                currentDbData = snapshot.docs.map(doc => doc.data());
+                document.getElementById('countDb').innerText = currentDbData.length;
+                
+                if (activeTab === 'db') {
+                    renderTable(currentDbData);
+                }
+            } catch (e) {
+                console.error("Gagal ambil data Firestore:", e);
+            }
+        }
+
+        // Render Data Table
+        function renderTable(data) {
+            const tbody = document.getElementById('attendanceTableBody');
+            tbody.innerHTML = '';
+
+            if (data.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="5" class="text-center py-12 text-gray-500">
+                            <i class="fa-solid fa-folder-open text-4xl mb-3 block opacity-40"></i>
+                            Tidak ada data untuk ditampilkan.
+                        </td>
+                    </tr>`;
+                return;
+            }
+
+            data.forEach(item => {
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-discord-dark/40 transition border-b border-gray-700/30';
+                tr.innerHTML = `
+                    <td class="py-3 px-6 flex items-center gap-3">
+                        <img src="${item.avatar}" class="w-9 h-9 rounded-full bg-discord-dark border border-gray-600 shadow-sm" onerror="this.src='https://cdn.discordapp.com/embed/avatars/0.png'">
+                        <div>
+                            <div class="font-semibold text-gray-100">${item.username}</div>
+                            <div class="text-xs text-gray-400">@${item.tag || item.username}</div>
+                        </div>
+                    </td>
+                    <td class="py-3 px-6 font-mono text-xs text-gray-400">${item.userId}</td>
+                    <td class="py-3 px-6 text-lg">${item.emoji}</td>
+                    <td class="py-3 px-6 text-xs text-gray-300">${item.timestamp}</td>
+                    <td class="py-3 px-6">
+                        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                            <i class="fa-solid fa-check text-[10px]"></i> Hadir
+                        </span>
+                    </td>
+                `;
+                tbody.appendChild(tr);
             });
         }
 
-        // Set Tanggal Hari Ini di Header
-        window.onload = () => {
-            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-            document.getElementById('current-date').innerText = new Date().toLocaleDateString('id-ID', options) + ' · WIB';
-        };
+        // UI Helpers & Tab Switching
+        function switchTab(tab) {
+            activeTab = tab;
+            const tabLive = document.getElementById('tabLive');
+            const tabDb = document.getElementById('tabDb');
 
-        // Chart Setup
-        const ctx = document.getElementById('attendanceChart').getContext('2d');
-        new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: ['[ESCORTA] t...', '[MAGANG DIK...', '[PLH DANSAT...', '[PLT DANSAT...'],
-                datasets: [{
-                    data: [23, 23, 23, 23],
-                    backgroundColor: '#4f46e5',
-                    borderRadius: 8,
-                    barThickness: 12
-                }]
-            },
-            options: {
-                indexAxis: 'y',
-                responsive: true,
-                plugins: { legend: { display: false } },
-                scales: {
-                    x: { grid: { color: '#21262d' }, ticks: { color: '#8b949e', font: { size: 10 } }, max: 24 },
-                    y: { grid: { display: false }, ticks: { color: '#f0f6fc', font: { size: 11, weight: '600' } } }
-                }
+            if (tab === 'live') {ion';
+                tabDb.className = 'border-b-2 border-transparent pb-3 px-2 font-medium text-sm text-gray-400 hover:text-gray-200 flex items-center gap-2 transition';
+                renderTable(currentLiveData);
+            } else {
+                tabDb.className = 'border-b-2 border-discord-accent pb-3 px-2 font-medium text-sm text-discord-accent flex items-center gap-2 transition';
+                tabLive.className = 'border-b-2 border-transparent pb-3 px-2 font-medium text-sm text-gray-400 hover:text-gray-200 flex items-center gap-2 transition';
+                renderTable(currentDbData);
             }
-        });
+        }
 
-        function toggleMenu() {
-            alert('Menu navigasi dibuka!');
+        function filterTable() {
+            const query = document.getElementById('searchInput').value.toLowerCase();
+            const source = activeTab === 'live' ? currentLiveData : currentDbData;
+            const filtered = source.filter(x => 
+                x.username.toLowerCase().includes(query) || 
+                x.userId.toLowerCase().includes(query)
+            );
+            renderTable(filtered);
+        }
+
+        function setLoading(isLoading) {
+            const btn = document.getElementById('btnFetch');
+            const spinner = document.getElementById('btnSpinner');
+            if (isLoading) {
+                btn.disabled = true;
+                btn.classList.add('opacity-70', 'cursor-not-allowed');
+                spinner.className = 'fa-solid fa-spinner fa-spin';
+            } else {
+                btn.disabled = false;
+                btn.classList.remove('opacity-70', 'cursor-not-allowed');
+                spinner.className = 'fa-solid fa-arrows-rotate';
+            }
+        }
+
+        function showAlert(msg, type) {
+            const box = document.getElementById('alertBox');
+            const icon = document.getElementById('alertIcon');
+            const text = document.getElementById('alertMessage');
+
+            box.classList.remove('hidden', 'bg-emerald-500/10', 'border-emerald-500/30', 'text-emerald-400', 'bg-rose-500/10', 'border-rose-500/30', 'text-rose-400', 'bg-amber-500/10', 'border-amber-500/30', 'text-amber-400');
+
+            if (type === 'success') {
+                box.classList.add('bg-emerald-500/10', 'border-emerald-500/30', 'text-emerald-400');
+                icon.className = 'fa-solid fa-circle-check text-lg';
+            } else if (type === 'error') {
+                box.classList.add('bg-rose-500/10', 'border-rose-500/30', 'text-rose-400');
+                icon.className = 'fa-solid fa-circle-exclamation text-lg';
+            } else {
+                box.classList.add('bg-amber-500/10', 'border-amber-500/30', 'text-amber-400');
+                icon.className = 'fa-solid fa-triangle-exclamation text-lg';
+            }
+
+            text.innerText = msg;
         }
     </script>
 </body>
 </html>
+                tabLive.className = 'border-b-2 border-discord-accent pb-3 px-2 font-medium text-sm text-discord-accent flex items-center gap-2 transit
