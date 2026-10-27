@@ -1,456 +1,237 @@
-
 <!DOCTYPE html>
-<html lang="id" class="dark">
+<html lang="id">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard Rekap Absensi Discord</title>
-    <!-- Tailwind CSS CDN -->
+    <title>Dashboard Absensi Discord</title>
+    <!-- Tailwind CSS untuk Styling Modern -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    colors: {
-                        discord: {
-                            bg: '#313338',
-                            card: '#2b2d31',
-                            dark: '#1e1f22',
-                            accent: '#5865f2',
-                            hover: '#4752c4'
-                        }
-                    }
-                }
-            }
-        }
+    <!-- Firebase SDK v9 -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
+        import { getFirestore, collection, addTimestamp, addDoc, getDocs, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDkxh4PBYrMv4xOwpXMsXtxZh87AwkPc2s",
+            authDomain: "absensi-245eb.firebaseapp.com",
+            projectId: "absensi-245eb",
+            storageBucket: "absensi-245eb.firebasestorage.app",
+            messagingSenderId: "1065682585954",
+            appId: "1:1065682585954:web:6f2f681d24bbd556ca843b",
+            measurementId: "G-RTHG8E54JX"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        // Simpan ke Global supaya bisa dipanggil fungsi lain
+        window.db = db;
+        window.collection = collection;
+        window.addDoc = addDoc;
+        window.getDocs = getDocs;
+        window.query = query;
+        window.orderBy = orderBy;
+        window.serverTimestamp = serverTimestamp;
     </script>
-    <!-- FontAwesome Icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
-    <!-- Firebase SDK (v9 Modular Compat) -->
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
 </head>
-<body class="bg-discord-dark text-gray-100 font-sans min-h-screen pb-12">
+<body class="bg-slate-900 text-slate-100 font-sans min-h-screen p-4 sm:p-6">
 
-    <!-- Header / Navbar -->
-    <nav class="bg-discord-card border-b border-gray-700/50 sticky top-0 z-50 backdrop-blur-md bg-opacity-90">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-            <div class="flex items-center gap-3">
-                <div class="bg-discord-accent p-2 rounded-xl shadow-lg shadow-discord-accent/30">
-                    <i class="fa-brands font-bold fa-discord text-2xl text-white"></i>
+    <div class="max-w-4xl mx-auto space-y-6">
+        <!-- Header -->
+        <header class="bg-slate-800 border border-slate-700 rounded-xl p-6 shadow-xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div>
+                <h1 class="text-2xl font-bold text-indigo-400">🤖 Dashboard Absensi Discord</h1>
+                <p class="text-sm text-slate-400">Rekap otomatis reaksi absensi & avatar anggota ke Firebase.</p>
+            </div>
+            <div id="statusBadge" class="px-3 py-1 bg-amber-500/10 text-amber-400 border border-amber-500/20 text-xs rounded-full font-medium">
+                Status: Menunggu Input
+            </div>
+        </header>
+
+        <!-- Form Konfigurasi -->
+        <section class="bg-slate-800 border border-slate-700 rounded-xl p-6 shadow-xl space-y-4">
+            <h2 class="text-lg font-semibold text-slate-200">Pengaturan Bot & Channel</h2>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-medium text-slate-400 mb-1">Bot Token</label>
+                    <input type="password" id="botToken" value="MTU2MzE3MTc2NDIyMDA3MjA5Ng.GhBImC.ZtYxPU0I5KZMPfVB7B_rbuSUKh_TPqhmZ7L99Y" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-indigo-500">
                 </div>
                 <div>
-                    <h1 class="text-xl font-bold tracking-wide">Absensi Discord Pro</h1>
-                    <p class="text-xs text-gray-400">Rekap Otomatis Reactions & Sync Firestore</p>
+                    <label class="block text-xs font-medium text-slate-400 mb-1">ID Channel Absensi</label>
+                    <input type="text" id="channelId" placeholder="Contoh: 123456789012345678" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-indigo-500">
                 </div>
             </div>
-            <div id="statusBadge" class="flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs px-3 py-1.5 rounded-full">
-                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
-                <span>Firestore Ready</span>
-            </div>
-        </div>
-    </nav>
-
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8 space-y-6">
-
-        <!-- Top Panel: Configuration -->
-        <div class="bg-discord-card border border-gray-700/60 rounded-2xl p-6 shadow-xl">
-            <h2 class="text-lg font-semibold mb-4 flex items-center gap-2 text-discord-accent">
-                <i class="fa-solid fa-sliders"></i> Pengaturan Webhook & Discord Target
-            </h2>
-
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                    <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Webhook URL (Opsional / Recommended)</label>
-                    <input type="text" id="inputWebhookUrl" class="w-full bg-discord-bg border border-gray-700 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-discord-accent transition text-gray-300" placeholder="https://discord.com/api/webhooks/...">
-                </div>
-                <div>
-                    <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Channel ID Absensi</label>
-                    <input type="text" id="inputChannelId" class="w-full bg-discord-bg border border-gray-700 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-discord-accent transition text-gray-300" placeholder="Contoh: 987654321098765432">
-                </div>
-            </div>
-
-            <div class="mt-4">
-                <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Bot Token</label>
-                <input type="password" id="inputBotToken" class="w-full bg-discord-bg border border-gray-700 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-discord-accent transition text-gray-300" placeholder="Bot Token Discord">
-            </div>
-
-            <div class="mt-6 flex flex-wrap items-center justify-between gap-4">
-                <div class="text-xs text-gray-400 flex items-center gap-2">
-                    <i class="fa-solid fa-bolt text-amber-400"></i>
-                    <span>Masukkan <b>Webhook URL</b> agar terbebas 100% dari CORS Error.</span>
-                </div>
-                
-                <button id="btnFetch" onclick="fetchAndProcessAttendance()" class="bg-discord-accent hover:bg-discord-hover text-white font-medium px-6 py-2.5 rounded-xl shadow-lg shadow-discord-accent/30 transition-all flex items-center gap-2 text-sm active:scale-95 cursor-pointer">
-                    <i class="fa-solid fa-arrows-rotate" id="btnSpinner"></i>
-                    <span>Tarik & Rekap Absensi</span>
+            <div class="flex flex-wrap gap-3 pt-2">
+                <button id="btnFetch" onclick="tarikAbsensi()" class="flex-1 bg-indigo-600 hover:bg-indigo-500 active:scale-95 transition text-white font-medium py-2.5 px-4 rounded-lg text-sm shadow-lg flex items-center justify-center gap-2">
+                    📥 Tarik & Rekap Absensi
+                </button>
+                <button id="btnSave" onclick="simpanKeFirestore()" class="bg-emerald-600 hover:bg-emerald-500 active:scale-95 transition text-white font-medium py-2.5 px-4 rounded-lg text-sm shadow-lg flex items-center justify-center gap-2">
+                    💾 Simpan ke Firestore
                 </button>
             </div>
-        </div>
+        </section>
 
-        <!-- Notification Alert Box -->
-        <div id="alertBox" class="hidden rounded-xl p-4 text-sm flex items-center gap-3 border transition-all">
-            <i id="alertIcon" class="fa-solid text-lg"></i>
-            <span id="alertMessage"></span>
-        </div>
-
-        <!-- Main Content: Tabs & Data Table -->
-        <div class="bg-discord-card border border-gray-700/60 rounded-2xl shadow-xl overflow-hidden">
-            <!-- Tabs Header -->
-            <div class="flex items-center justify-between border-b border-gray-700/60 px-6 pt-4 bg-discord-dark/50">
-                <div class="flex gap-4">
-                    <button onclick="switchTab('live')" id="tabLive" class="border-b-2 border-discord-accent pb-3 px-2 font-medium text-sm text-discord-accent flex items-center gap-2 transition">
-                        <i class="fa-solid fa-bolt"></i> Hasil Tarik Hari Ini (<span id="countLive">0</span>)
-                    </button>
-                    <button onclick="switchTab('db')" id="tabDb" class="border-b-2 border-transparent pb-3 px-2 font-medium text-sm text-gray-400 hover:text-gray-200 flex items-center gap-2 transition">
-                        <i class="fa-solid fa-database"></i> Database Firestore (<span id="countDb">0</span>)
-                    </button>
-                </div>
-                <div class="pb-3">
-                    <input type="text" id="searchInput" onkeyup="filterTable()" placeholder="Cari Anggota..." class="bg-discord-bg border border-gray-700 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-discord-accent text-gray-300 w-48">
-                </div>
+        <!-- Tabel Rekap Data -->
+        <section class="bg-slate-800 border border-slate-700 rounded-xl p-6 shadow-xl space-y-4">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                <h2 class="text-lg font-semibold text-slate-200">Data Kehadiran Hari Ini</h2>
+                <input type="text" id="searchBox" onkeyup="filterTabel()" placeholder="Cari nama anggota..." class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 w-full sm:w-64">
             </div>
 
-            <!-- Table Container -->
-            <div class="overflow-x-auto">
-                <table class="w-full text-left text-sm text-gray-300">
-                    <thead class="bg-discord-dark/80 uppercase text-xs text-gray-400 border-b border-gray-700/60">
-                        <tr>
-                            <th class="py-3.5 px-6">Anggota Discord</th>
-                            <th class="py-3.5 px-6">User ID</th>
-                            <th class="py-3.5 px-6">Emoji Absen</th>
-                            <th class="py-3.5 px-6">Waktu / Tanggal Absen</th>
-                            <th class="py-3.5 px-6">Status Rekap</th>
+            <div class="overflow-x-auto rounded-lg border border-slate-700">
+                <table id="tabelAbsensi" class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-slate-900/50 text-slate-400 text-xs uppercase tracking-wider">
+                            <th class="p-3">Avatar</th>
+                            <th class="p-3">Nama Anggota</th>
+                            <th class="p-3">Emoji Reaksi</th>
+                            <th class="p-3">Waktu Absen</th>
                         </tr>
                     </thead>
-                    <tbody id="attendanceTableBody" class="divide-y divide-gray-700/40">
-                        <!-- Dynamic Rows Here -->
+                    <tbody id="tabelBody" class="divide-y divide-slate-700 text-sm text-slate-300">
                         <tr>
-                            <td colspan="5" class="text-center py-12 text-gray-500">
-                                <i class="fa-solid fa-inbox text-4xl mb-3 block opacity-40"></i>
-                                Belum ada data absensi ditarik. Klik tombol <b>"Tarik & Rekap Absensi"</b> di atas.
-                            </td>
+                            <td colspan="4" class="p-6 text-center text-slate-500">Belum ada data. Silakan masukkan Channel ID lalu klik Tarik Absensi.</td>
                         </tr>
                     </tbody>
                 </table>
             </div>
-        </div>
-
+        </section>
     </div>
 
-    <!-- JavaScript App Engine -->
+    <!-- Script Utama -->
     <script>
-        // 1. Firebase Firestore Setup
-        // Auto Load Saved Inputs
-        window.addEventListener('DOMContentLoaded', () => {
-            document.getElementById('inputBotToken').value = localStorage.getItem('disc_bot_token') || "MTU2MzE3MTc2NDIyMDA3MjA5Ng.GhBImC.ZtYxPU0I5KZMPfVB7B_rbuSUKh_TPqhmZ7L99Y";
-            document.getElementById('inputChannelId').value = localStorage.getItem('disc_channel_id') || "";
-            document.getElementById('inputWebhookUrl').value = localStorage.getItem('disc_webhook_url') || "";
-            
-            loadFirestoreData();
-        });
-
-        // Combined Smart Fetch Engine (Supports Webhook Gateway Direct Fetch)
-        async function fetchDiscordAPI(endpoint, token) {
-            const webhookUrl = document.getElementById('inputWebhookUrl').value.trim();
-            const directUrl = `https://discord.com/api/v10/${endpoint}`;
-            
-            // If Webhook provided, test execution/ping first
-            if (webhookUrl && endpoint.includes('messages')) {
-                try {
-                    const res = await fetch(webhookUrl);
-                    if (res.ok) {
-                        const whData = await res.json();
-                        if (whData.channel_id) {
-                            // Fetch via Webhook Channel endpoint
-                            const whFetchUrl = `https://discord.com/api/v10/channels/${whData.channel_id}/messages?limit=10`;
-                            const whRes = await fetch(whFetchUrl, { headers: { 'Authorization': `Bot ${token}` } });
-                            if (whRes.ok) return await whRes.json();
-                        }
-                    }
-                } catch (e) {
-                    console.log("Webhook fetch bypass attempt...");
-                }
+        // Load data tersimpan di browser
+        window.onload = function() {
+            if(localStorage.getItem('saved_channel')) {
+                document.getElementById('channelId').value = localStorage.getItem('saved_channel');
             }
-
-            // Public Proxy Fallbacks
-            const proxyUrls = [
-                `https://api.allorigins.win/raw?url=${encodeURIComponent(directUrl)}`,
-                `https://corsproxy.io/?${encodeURIComponent(directUrl)}`
-            ];
-
-            for (const pUrl of proxyUrls) {
-                try {
-                    const res = await fetch(pUrl, {
-                        headers: { 'Authorization': `Bot ${token}` }
-                    });
-                    if (res.ok) return await res.json();
-                } catch (err) {
-                    continue;
-                }
-            }
-
-            throw new Error("Gagal mengambil data dari Discord. Pastikan Token Bot / Webhook valid!");
         }
 
-        // Global States
-        let currentLiveData = [];
-        let currentDbData = [];
-        let activeTab = 'live';
+        let currentData = [];
 
-        // Auto Load Token & Saved IDs from localStorage
-        window.addEventListener('DOMContentLoaded', () => {
-            document.getElementById('inputBotToken').value = localStorage.getItem('disc_bot_token') || "MTU2MzE3MTc2NDIyMDA3MjA5Ng.GhBImC.ZtYxPU0I5KZMPfVB7B_rbuSUKh_TPqhmZ7L99Y";
-            document.getElementById('inputServerId').value = localStorage.getItem('disc_server_id') || "";
-            document.getElementById('inputChannelId').value = localStorage.getItem('disc_channel_id') || "";
-            
-            // Initial load from Firestore
-            loadFirestoreData();
-        });
+        async function tarikAbsensi() {
+            const token = document.getElementById('botToken').value.trim();
+            const channelId = document.getElementById('channelId').value.trim();
+            const badge = document.getElementById('statusBadge');
+            const btn = document.getElementById('btnFetch');
 
-        // Smart Discord API Fetcher (Multi-Bypass Engine)
-        async function fetchDiscordAPI(endpoint, token) {
-            const proxies = [
-                (url) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
-                (url) => `https://corsproxy.io/?${encodeURIComponent(url)}`
-            ];
-
-            const directUrl = `https://discord.com/api/v10/${endpoint}`;
-            const headers = { 'Authorization': `Bot ${token}` };
-
-            // 1. Try Direct First
-            try {
-                const res = await fetch(directUrl, { headers });
-                if (res.ok) return await res.json();
-            } catch (err) {
-                console.warn("Direct fetch blocked by CORS, switching to proxy bypass...");
-            }
-
-            // 2. Try Proxies
-            for (const proxyFn of proxies) {
-                try {
-                    const proxyUrl = proxyFn(directUrl);
-                    const res = await fetch(proxyUrl, { headers });
-                    if (res.ok) {
-                        return await res.json();
-                    }
-                } catch (e) {
-                    console.warn("Proxy attempt failed, trying next...");
-                }
-            }
-
-            throw new Error("Gagal terhubung ke Discord API. Pastikan Token Bot & Channel ID benar!");
-        }
-
-        // Main Fetch & Rekap Function
-        async function fetchAndProcessAttendance() {
-            const token = document.getElementById('inputBotToken').value.trim();
-            const channelId = document.getElementById('inputChannelId').value.trim();
-            const serverId = document.getElementById('inputServerId').value.trim();
-
-            if (!token || !channelId) {
-                showAlert('Harap isi Bot Token dan Channel ID Absensi terlebih dahulu!', 'error');
+            if(!token || !channelId) {
+                alert('Bot Token dan Channel ID wajib diisi!');
                 return;
             }
 
-            // Save to Local Storage for user convenience
-            localStorage.setItem('disc_bot_token', token);
-            localStorage.setItem('disc_channel_id', channelId);
-            localStorage.setItem('disc_server_id', serverId);
-
-            setLoading(true);
+            localStorage.setItem('saved_channel', channelId);
+            badge.className = "px-3 py-1 bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 text-xs rounded-full font-medium animate-pulse";
+            badge.innerText = "Status: Mengambil data dari Discord...";
+            btn.disabled = true;
 
             try {
-                // 1. Fetch Last Messages from Attendance Channel
-                const messages = await fetchDiscordAPI(`channels/${channelId}/messages?limit=10`, token);
+                // Menggunakan proxy cors publicly available untuk bypass CORS browser
+                const proxyUrl = `https://corsproxy.io/?` + encodeURIComponent(`https://discord.com/api/v10/channels/${channelId}/messages?limit=15`);
+                
+                const response = await fetch(proxyUrl, {
+                    headers: { 'Authorization': `Bot ${token}` }
+                });
 
-                if (!messages || messages.length === 0) {
-                    showAlert('Tidak ada pesan ditemukan di channel absensi tersebut.', 'warning');
-                    setLoading(false);
-                    return;
-                }
+                if(!response.ok) throw new Error(`Gagal mengambil pesan (Error ${response.status}). Cek kembali Channel ID & izin bot!`);
 
-                let attendanceList = [];
-                let processedUserIds = new Set();
+                const messages = await response.json();
+                let listAbsen = [];
+                let checkedUsers = new Set();
 
-                // 2. Scan reactions across messages
                 for (const msg of messages) {
-                    if (msg.reactions && msg.reactions.length > 0) {
+                    if (msg.reactions) {
                         for (const rx of msg.reactions) {
                             const emojiParam = rx.emoji.id ? `${rx.emoji.name}:${rx.emoji.id}` : encodeURIComponent(rx.emoji.name);
+                            const rxProxyUrl = `https://corsproxy.io/?` + encodeURIComponent(`https://discord.com/api/v10/channels/${channelId}/messages/${msg.id}/reactions/${emojiParam}`);
                             
-                            // Get users who reacted
-                            const users = await fetchDiscordAPI(`channels/${channelId}/messages/${msg.id}/reactions/${emojiParam}`, token);
+                            const rxRes = await fetch(rxProxyUrl, {
+                                headers: { 'Authorization': `Bot ${token}` }
+                            });
 
-                            for (const u of users) {
-                                if (u.bot || processedUserIds.has(u.id)) continue;
-                                processedUserIds.add(u.id);
+                            if(rxRes.ok) {
+                                const users = await rxRes.json();
+                                for (const user of users) {
+                                    if(!user.bot && !checkedUsers.has(user.id)) {
+                                        checkedUsers.add(user.id);
+                                        const avatarUrl = user.avatar 
+                                            ? `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png`
+                                            : `https://cdn.discordapp.com/embed/avatars/0.png`;
 
-                                // Construct Discord Avatar CDN URL
-                                const avatarUrl = u.avatar 
-                                    ? `https://cdn.discordapp.com/avatars/${u.id}/${u.avatar}.png?size=128`
-                                    : `https://cdn.discordapp.com/embed/avatars/${(BigInt(u.id) >> 22n) % 5n}.png`;
-
-                                const record = {
-                                    userId: u.id,
-                                    username: u.global_name || u.username,
-                                    tag: `${u.username}`,
-                                    avatar: avatarUrl,
-                                    emoji: rx.emoji.name,
-                                    timestamp: new Date(msg.timestamp).toLocaleString('id-ID'),
-                                    dateKey: new Date().toISOString().split('T')[0]
-                                };
-
-                                attendanceList.push(record);
-
-                                // Save/Update to Firestore
-                                if (db) {
-                                    await db.collection('absensi_rekap').doc(`${record.dateKey}_${record.userId}`).set(record, { merge: true });
+                                        listAbsen.push({
+                                            userId: user.id,
+                                            username: user.global_name || user.username,
+                                            avatar: avatarUrl,
+                                            emoji: rx.emoji.name,
+                                            timestamp: new Date(msg.timestamp).toLocaleString('id-ID')
+                                        });
+                                    }
                                 }
                             }
                         }
                     }
                 }
 
-                currentLiveData = attendanceList;
-                document.getElementById('countLive').innerText = attendanceList.length;
-
-                if (attendanceList.length === 0) {
-                    showAlert('Berhasil terhubung, tapi tidak ada reaction anggota di pesan absensi!', 'warning');
-                } else {
-                    showAlert(`Berhasil merekap ${attendanceList.length} anggota & tersimpan ke Firestore!`, 'success');
-                }
-
-                switchTab('live');
-                loadFirestoreData();
+                currentData = listAbsen;
+                renderTabel(currentData);
+                badge.className = "px-3 py-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-xs rounded-full font-medium";
+                badge.innerText = `Status: Berhasil (${currentData.length} data ditemukan)`;
 
             } catch (err) {
                 console.error(err);
-                showAlert(err.message || 'Gagal mengambil data dari Discord.', 'error');
+                badge.className = "px-3 py-1 bg-rose-500/10 text-rose-400 border border-rose-500/20 text-xs rounded-full font-medium";
+                badge.innerText = "Status: Gagal (Cek CORS / Koneksi)";
+                alert('Gagal mengambil data: ' + err.message);
             } finally {
-                setLoading(false);
+                btn.disabled = false;
             }
         }
 
-        // Fetch Firestore Database Logs
-        async function loadFirestoreData() {
-            if (!db) return;
-            try {
-                const snapshot = await db.collection('absensi_rekap').get();
-                currentDbData = snapshot.docs.map(doc => doc.data());
-                document.getElementById('countDb').innerText = currentDbData.length;
-                
-                if (activeTab === 'db') {
-                    renderTable(currentDbData);
-                }
-            } catch (e) {
-                console.error("Gagal ambil data Firestore:", e);
-            }
-        }
-
-        // Render Data Table
-        function renderTable(data) {
-            const tbody = document.getElementById('attendanceTableBody');
-            tbody.innerHTML = '';
-
-            if (data.length === 0) {
-                tbody.innerHTML = `
-                    <tr>
-                        <td colspan="5" class="text-center py-12 text-gray-500">
-                            <i class="fa-solid fa-folder-open text-4xl mb-3 block opacity-40"></i>
-                            Tidak ada data untuk ditampilkan.
-                        </td>
-                    </tr>`;
+        function renderTabel(data) {
+            const tbody = document.getElementById('tabelBody');
+            if(data.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="4" class="p-6 text-center text-slate-500">Tidak ada reaksi ditemukan pada pesan terakhir di channel ini.</td></tr>`;
                 return;
             }
 
-            data.forEach(item => {
-                const tr = document.createElement('tr');
-                tr.className = 'hover:bg-discord-dark/40 transition border-b border-gray-700/30';
-                tr.innerHTML = `
-                    <td class="py-3 px-6 flex items-center gap-3">
-                        <img src="${item.avatar}" class="w-9 h-9 rounded-full bg-discord-dark border border-gray-600 shadow-sm" onerror="this.src='https://cdn.discordapp.com/embed/avatars/0.png'">
-                        <div>
-                            <div class="font-semibold text-gray-100">${item.username}</div>
-                            <div class="text-xs text-gray-400">@${item.tag || item.username}</div>
-                        </div>
+            tbody.innerHTML = data.map(item => `
+                <tr class="hover:bg-slate-700/30 transition">
+                    <td class="p-3">
+                        <img src="${item.avatar}" alt="Avatar" class="w-10 h-10 rounded-full bg-slate-700 object-cover">
                     </td>
-                    <td class="py-3 px-6 font-mono text-xs text-gray-400">${item.userId}</td>
-                    <td class="py-3 px-6 text-lg">${item.emoji}</td>
-                    <td class="py-3 px-6 text-xs text-gray-300">${item.timestamp}</td>
-                    <td class="py-3 px-6">
-                        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                            <i class="fa-solid fa-check text-[10px]"></i> Hadir
-                        </span>
-                    </td>
-                `;
-                tbody.appendChild(tr);
-            });
+                    <td class="p-3 font-medium text-slate-200">${item.username}</td>
+                    <td class="p-3 text-lg">${item.emoji}</td>
+                    <td class="p-3 text-xs text-slate-400">${item.timestamp}</td>
+                </tr>
+            `).join('');
         }
 
-        // UI Helpers & Tab Switching
-        function switchTab(tab) {
-            activeTab = tab;
-            const tabLive = document.getElementById('tabLive');
-            const tabDb = document.getElementById('tabDb');
-
-            if (tab === 'live') {ion';
-                tabDb.className = 'border-b-2 border-transparent pb-3 px-2 font-medium text-sm text-gray-400 hover:text-gray-200 flex items-center gap-2 transition';
-                renderTable(currentLiveData);
-            } else {
-                tabDb.className = 'border-b-2 border-discord-accent pb-3 px-2 font-medium text-sm text-discord-accent flex items-center gap-2 transition';
-                tabLive.className = 'border-b-2 border-transparent pb-3 px-2 font-medium text-sm text-gray-400 hover:text-gray-200 flex items-center gap-2 transition';
-                renderTable(currentDbData);
-            }
+        function filterTabel() {
+            const keyword = document.getElementById('searchBox').value.toLowerCase();
+            const filtered = currentData.filter(item => item.username.toLowerCase().includes(keyword));
+            renderTabel(filtered);
         }
 
-        function filterTable() {
-            const query = document.getElementById('searchInput').value.toLowerCase();
-            const source = activeTab === 'live' ? currentLiveData : currentDbData;
-            const filtered = source.filter(x => 
-                x.username.toLowerCase().includes(query) || 
-                x.userId.toLowerCase().includes(query)
-            );
-            renderTable(filtered);
-        }
-
-        function setLoading(isLoading) {
-            const btn = document.getElementById('btnFetch');
-            const spinner = document.getElementById('btnSpinner');
-            if (isLoading) {
-                btn.disabled = true;
-                btn.classList.add('opacity-70', 'cursor-not-allowed');
-                spinner.className = 'fa-solid fa-spinner fa-spin';
-            } else {
-                btn.disabled = false;
-                btn.classList.remove('opacity-70', 'cursor-not-allowed');
-                spinner.className = 'fa-solid fa-arrows-rotate';
-            }
-        }
-
-        function showAlert(msg, type) {
-            const box = document.getElementById('alertBox');
-            const icon = document.getElementById('alertIcon');
-            const text = document.getElementById('alertMessage');
-
-            box.classList.remove('hidden', 'bg-emerald-500/10', 'border-emerald-500/30', 'text-emerald-400', 'bg-rose-500/10', 'border-rose-500/30', 'text-rose-400', 'bg-amber-500/10', 'border-amber-500/30', 'text-amber-400');
-
-            if (type === 'success') {
-                box.classList.add('bg-emerald-500/10', 'border-emerald-500/30', 'text-emerald-400');
-                icon.className = 'fa-solid fa-circle-check text-lg';
-            } else if (type === 'error') {
-                box.classList.add('bg-rose-500/10', 'border-rose-500/30', 'text-rose-400');
-                icon.className = 'fa-solid fa-circle-exclamation text-lg';
-            } else {
-                box.classList.add('bg-amber-500/10', 'border-amber-500/30', 'text-amber-400');
-                icon.className = 'fa-solid fa-triangle-exclamation text-lg';
+        async function simpanKeFirestore() {
+            if(currentData.length === 0) {
+                alert('Belum ada data absensi untuk disimpan!');
+                return;
             }
 
-            text.innerText = msg;
+            try {
+                const batchCol = window.collection(window.db, "rekap_absensi");
+                await window.addDoc(batchCol, {
+                    tanggal: new Date().toISOString().split('T')[0],
+                    totalHadir: currentData.length,
+                    dataAnggota: currentData,
+                    createdAt: window.serverTimestamp()
+                });
+                alert('Sukses! Data absensi berhasil disimpan ke Firebase Firestore.');
+            } catch (e) {
+                console.error(e);
+                alert('Gagal menyimpan ke Firestore: ' + e.message);
+            }
         }
     </script>
 </body>
 </html>
-                tabLive.className = 'border-b-2 border-discord-accent pb-3 px-2 font-medium text-sm text-discord-accent flex items-center gap-2 transit
