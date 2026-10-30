@@ -1,0 +1,335 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rekap Absensi Discord</title>
+<style>
+  :root {
+    --bg: #14161a; --panel: #1d2026; --panel2: #252932; --line: #2e333d;
+    --text: #e8eaee; --muted: #8b93a1; --accent: #5b8def; --ok: #3ecf8e; --bad: #f0616d;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  .wrap { max-width: 1100px; margin: 0 auto; padding: 16px; }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  .sub { color: var(--muted); margin: 0 0 16px; font-size: 14px; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 16px; }
+  label { display: block; font-size: 13px; color: var(--muted); margin: 12px 0 4px; }
+  input[type=text], input[type=password], input[type=month], select {
+    width: 100%; padding: 10px 12px; background: var(--panel2); color: var(--text);
+    border: 1px solid var(--line); border-radius: 8px; font: inherit;
+  }
+  input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+  .hint { font-size: 12px; color: var(--muted); margin-top: 4px; }
+  .check { display: flex; align-items: center; gap: 8px; margin-top: 14px; color: var(--muted); font-size: 13px; }
+  button { font: inherit; cursor: pointer; border-radius: 8px; border: 1px solid var(--line); background: var(--panel2); color: var(--text); padding: 9px 14px; }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+  button:disabled { opacity: .5; cursor: default; }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .grow { flex: 1; }
+  .err { background: #3a1f24; border: 1px solid #6b2b34; color: #ffb3ba; padding: 10px 12px; border-radius: 8px; margin-top: 12px; font-size: 14px; }
+  .warn { background: #3a331f; border: 1px solid #6b5d2b; color: #ffe7a0; padding: 10px 12px; border-radius: 8px; margin: 12px 0 0; font-size: 13px; }
+  .hidden { display: none !important; }
+  .bar { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+  .tabs { display: flex; gap: 4px; background: var(--panel); padding: 4px; border-radius: 10px; border: 1px solid var(--line); }
+  .tabs button { border: 0; background: transparent; color: var(--muted); }
+  .tabs button.on { background: var(--panel2); color: var(--text); }
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 12px 0; }
+  .stat { background: var(--panel2); border-radius: 10px; padding: 10px 12px; }
+  .stat b { display: block; font-size: 22px; }
+  .stat span { color: var(--muted); font-size: 12px; }
+  .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 700px) { .cols { grid-template-columns: 1fr; } }
+  .person { display: flex; align-items: center; gap: 10px; padding: 6px 0; min-width: 0; }
+  .person img { width: 32px; height: 32px; border-radius: 50%; background: var(--panel2); flex: none; }
+  .person span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  h3 { margin: 0 0 6px; font-size: 14px; }
+  h3.ok { color: var(--ok); } h3.bad { color: var(--bad); }
+  .scroll { overflow: auto; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); }
+  table { border-collapse: collapse; width: 100%; font-size: 13px; }
+  th, td { padding: 6px 8px; text-align: center; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  th { background: var(--panel2); position: sticky; top: 0; z-index: 2; font-weight: 600; }
+  th small { display: block; color: var(--muted); font-weight: 400; font-size: 10px; text-transform: capitalize; }
+  td.name, th.name { text-align: left; position: sticky; left: 0; background: var(--panel); z-index: 1; min-width: 170px; max-width: 220px; }
+  th.name { background: var(--panel2); z-index: 3; }
+  td.name .person { padding: 0; }
+  .y { color: var(--ok); font-weight: 700; } .n { color: #3d4350; }
+  .pct { display: flex; align-items: center; gap: 8px; min-width: 140px; }
+  .pct .track { flex: 1; height: 8px; background: var(--panel2); border-radius: 4px; overflow: hidden; }
+  .pct .fill { height: 100%; background: var(--ok); }
+  .mlist td { text-align: left; } .mlist td.num { text-align: right; }
+  .empty { color: var(--muted); padding: 24px; text-align: center; }
+  .spin { color: var(--muted); padding: 24px; text-align: center; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Rekap Absensi Discord</h1>
+  <p class="sub">Rekap otomatis dari react anggota di channel absensi.</p>
+
+  <!-- Form koneksi -->
+  <div id="setup" class="card" style="max-width:520px">
+    <div id="tokenField">
+      <label for="token">Token bot Discord</label>
+      <input id="token" type="password" autocomplete="off" placeholder="Token dari Discord Developer Portal">
+      <div class="hint">Token hanya dikirim ke server web ini untuk memanggil Discord, tidak disimpan di server.</div>
+    </div>
+    <label for="guildId">ID server</label>
+    <input id="guildId" type="text" inputmode="numeric" placeholder="contoh: 123456789012345678">
+    <label for="channelId">ID channel absensi</label>
+    <input id="channelId" type="text" inputmode="numeric" placeholder="contoh: 123456789012345678">
+    <label for="roleId">ID role anggota (opsional)</label>
+    <input id="roleId" type="text" inputmode="numeric" placeholder="Kosongkan = semua anggota non-bot">
+    <div class="hint">Isi kalau yang wajib absen cuma role tertentu, supaya staff atau member lain tidak ikut dihitung "tidak hadir".</div>
+    <label for="keyword">Kata kunci pesan absensi (opsional)</label>
+    <input id="keyword" type="text" placeholder="contoh: absensi">
+    <div class="hint">Kosong = semua pesan yang ada react dihitung sebagai absensi. Diisi = hanya pesan yang mengandung kata itu (hari tanpa react tetap tercatat).</div>
+    <label class="check"><input id="remember" type="checkbox"> Ingat di browser ini</label>
+    <div id="setupErr" class="err hidden"></div>
+    <div class="row" style="margin-top:16px"><button id="connect" class="primary grow">Hubungkan</button></div>
+  </div>
+
+  <!-- Dashboard -->
+  <div id="app" class="hidden">
+    <div class="bar">
+      <div>
+        <strong id="chanTitle"></strong>
+        <div class="hint" id="chanSub"></div>
+      </div>
+      <div class="row">
+        <button id="prev" title="Bulan sebelumnya">‹</button>
+        <input id="month" type="month" style="width:auto">
+        <button id="next" title="Bulan berikutnya">›</button>
+        <button id="refresh">Muat ulang</button>
+        <button id="csv">CSV</button>
+        <button id="logout">Keluar</button>
+      </div>
+    </div>
+    <div class="tabs" style="margin-bottom:12px; width:max-content; max-width:100%; overflow:auto">
+      <button data-tab="today" class="on">Hari ini</button>
+      <button data-tab="table">Tabel tanggal</button>
+      <button data-tab="month">Rekap bulanan</button>
+    </div>
+    <div id="warn" class="warn hidden"></div>
+    <div id="appErr" class="err hidden"></div>
+    <div id="view"></div>
+  </div>
+</div>
+
+<script>
+const $ = (s) => document.querySelector(s);
+function h(tag, props = {}, ...kids) {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(props)) {
+    if (k === 'class') e.className = v;
+    else if (k.startsWith('on')) e.addEventListener(k.slice(2), v);
+    else if (v !== false && v != null) e.setAttribute(k, v);
+  }
+  for (const k of kids.flat()) {
+    if (k == null || k === false) continue;
+    e.append(k.nodeType ? k : document.createTextNode(String(k)));
+  }
+  return e;
+}
+
+const state = { cfg: null, hasEnvToken: false, month: null, data: null, tab: 'today', date: null, channelName: '', guildName: '' };
+const FIELDS = ['token', 'guildId', 'channelId', 'roleId', 'keyword'];
+
+function saveCfg(remember) {
+  const json = JSON.stringify(state.cfg);
+  try {
+    sessionStorage.setItem('absensi.cfg', json);
+    if (remember) localStorage.setItem('absensi.cfg', json); else localStorage.removeItem('absensi.cfg');
+  } catch (e) {}
+}
+function loadCfg() {
+  try { return JSON.parse(sessionStorage.getItem('absensi.cfg') || localStorage.getItem('absensi.cfg') || 'null'); } catch (e) { return null; }
+}
+function clearCfg() { try { sessionStorage.removeItem('absensi.cfg'); localStorage.removeItem('absensi.cfg'); } catch (e) {} }
+
+async function api(path, body) {
+  const res = await fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  const j = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(j.error || 'Terjadi kesalahan (' + res.status + ')');
+  return j;
+}
+
+function showErr(el, msg) { el.textContent = msg; el.classList.toggle('hidden', !msg); }
+
+// ---------- Koneksi ----------
+async function connect() {
+  const cfg = {};
+  FIELDS.forEach((f) => (cfg[f] = $('#' + f).value.trim()));
+  showErr($('#setupErr'), '');
+  $('#connect').disabled = true;
+  $('#connect').textContent = 'Memeriksa…';
+  try {
+    const info = await api('/api/verify', cfg);
+    state.cfg = cfg;
+    state.channelName = info.channelName;
+    state.guildName = info.guildName;
+    saveCfg($('#remember').checked);
+    openApp();
+  } catch (e) {
+    showErr($('#setupErr'), e.message);
+  } finally {
+    $('#connect').disabled = false;
+    $('#connect').textContent = 'Hubungkan';
+  }
+}
+
+function openApp() {
+  $('#setup').classList.add('hidden');
+  $('#app').classList.remove('hidden');
+  $('#chanTitle').textContent = '#' + state.channelName;
+  $('#chanSub').textContent = state.guildName;
+  if (!state.month) state.month = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jakarta' }).format(new Date()).slice(0, 7);
+  $('#month').value = state.month;
+  load();
+}
+
+async function load() {
+  showErr($('#appErr'), '');
+  $('#view').replaceChildren(h('div', { class: 'spin' }, 'Mengambil data dari Discord… (bisa beberapa detik)'));
+  try {
+    state.data = await api('/api/attendance', { ...state.cfg, month: state.month });
+    const d = state.data;
+    if (!state.date || !d.days.includes(state.date)) state.date = d.days.includes(d.today) ? d.today : d.days[d.days.length - 1] || null;
+    const w = $('#warn');
+    if (d.membersSource === 'reactions') {
+      w.textContent = 'Daftar anggota server tidak bisa diambil (aktifkan "Server Members Intent" di Developer Portal). Sementara hanya anggota yang pernah react bulan ini yang muncul, jadi yang belum pernah react sama sekali tidak terdaftar sebagai "tidak hadir".';
+      w.classList.remove('hidden');
+    } else w.classList.add('hidden');
+    render();
+  } catch (e) {
+    $('#view').replaceChildren();
+    showErr($('#appErr'), e.message);
+  }
+}
+
+// ---------- Render ----------
+const dayNum = (k) => String(Number(k.slice(8)));
+const dowOf = (k) => new Date(k + 'T12:00:00+07:00').toLocaleDateString('id-ID', { weekday: 'short', timeZone: 'Asia/Jakarta' });
+const longDate = (k) => new Date(k + 'T12:00:00+07:00').toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Asia/Jakarta' });
+
+function person(m) {
+  return h('div', { class: 'person' }, h('img', { src: m.avatar, alt: '', loading: 'lazy' }), h('span', { title: m.name }, m.name));
+}
+
+function render() {
+  const d = state.data;
+  if (!d) return;
+  document.querySelectorAll('.tabs button').forEach((b) => b.classList.toggle('on', b.dataset.tab === state.tab));
+  if (!d.days.length) {
+    $('#view').replaceChildren(h('div', { class: 'card empty' }, 'Belum ada pesan absensi di bulan ini. Kalau staff sudah kirim chat absensi tapi tidak muncul, cek kata kunci atau pastikan sudah ada yang react.'));
+    return;
+  }
+  const v = state.tab === 'today' ? viewToday(d) : state.tab === 'table' ? viewTable(d) : viewMonth(d);
+  $('#view').replaceChildren(v);
+}
+
+function viewToday(d) {
+  const day = state.date;
+  const hadir = d.members.filter((m) => (d.attendance[m.id] || []).includes(day));
+  const tidak = d.members.filter((m) => !(d.attendance[m.id] || []).includes(day));
+  const pct = d.members.length ? Math.round((hadir.length / d.members.length) * 100) : 0;
+  const sel = h('select', { onchange: (e) => { state.date = e.target.value; render(); } },
+    [...d.days].reverse().map((k) => h('option', { value: k, selected: k === day }, longDate(k) + (k === d.today ? ' (hari ini)' : ''))));
+  return h('div', { class: 'card' },
+    h('div', { class: 'row' }, h('div', { class: 'grow' }, sel)),
+    day !== d.today && h('div', { class: 'hint' }, 'Belum ada absensi untuk hari ini, menampilkan tanggal terakhir yang ada.'),
+    h('div', { class: 'stats' },
+      h('div', { class: 'stat' }, h('b', {}, hadir.length), h('span', {}, 'Hadir')),
+      h('div', { class: 'stat' }, h('b', {}, tidak.length), h('span', {}, 'Tidak hadir')),
+      h('div', { class: 'stat' }, h('b', {}, pct + '%'), h('span', {}, 'Kehadiran'))),
+    h('div', { class: 'cols' },
+      h('div', {}, h('h3', { class: 'ok' }, 'Hadir (' + hadir.length + ')'), hadir.length ? hadir.map(person) : h('div', { class: 'hint' }, 'Belum ada.')),
+      h('div', {}, h('h3', { class: 'bad' }, 'Tidak hadir (' + tidak.length + ')'), tidak.length ? tidak.map(person) : h('div', { class: 'hint' }, 'Semua hadir 🎉'))));
+}
+
+function viewTable(d) {
+  const head = h('tr', {}, h('th', { class: 'name' }, 'Anggota'),
+    d.days.map((k) => h('th', {}, dayNum(k), h('small', {}, dowOf(k)))), h('th', {}, 'Total'));
+  const rows = d.members.map((m) => {
+    const set = new Set(d.attendance[m.id] || []);
+    return h('tr', {}, h('td', { class: 'name' }, person(m)),
+      d.days.map((k) => h('td', { class: set.has(k) ? 'y' : 'n' }, set.has(k) ? '✓' : '–')),
+      h('td', {}, set.size + '/' + d.days.length));
+  });
+  return h('div', { class: 'scroll' }, h('table', {}, h('thead', {}, head), h('tbody', {}, rows)));
+}
+
+function monthStats(d) {
+  return d.members.map((m) => {
+    const n = (d.attendance[m.id] || []).length;
+    return { m, n, pct: d.days.length ? Math.round((n / d.days.length) * 100) : 0 };
+  }).sort((a, b) => b.n - a.n || a.m.name.localeCompare(b.m.name, 'id'));
+}
+
+function viewMonth(d) {
+  const rows = monthStats(d).map((s, i) => h('tr', {},
+    h('td', { class: 'num' }, i + 1), h('td', {}, person(s.m)),
+    h('td', { class: 'num' }, s.n + ' / ' + d.days.length),
+    h('td', {}, h('div', { class: 'pct' }, h('div', { class: 'track' }, h('div', { class: 'fill', style: 'width:' + s.pct + '%' })), h('span', {}, s.pct + '%')))));
+  return h('div', { class: 'scroll' }, h('table', { class: 'mlist' },
+    h('thead', {}, h('tr', {}, h('th', {}, '#'), h('th', { class: '', style: 'text-align:left' }, 'Anggota'), h('th', {}, 'Hadir'), h('th', { style: 'text-align:left' }, 'Persentase'))),
+    h('tbody', {}, rows)));
+}
+
+// ---------- CSV ----------
+function exportCsv() {
+  const d = state.data;
+  if (!d || !d.days.length) return;
+  const esc = (s) => '"' + String(s).replace(/"/g, '""') + '"';
+  const lines = [['Nama', 'ID', ...d.days, 'Total', 'Persen'].map(esc).join(',')];
+  for (const m of d.members) {
+    const set = new Set(d.attendance[m.id] || []);
+    const pct = Math.round((set.size / d.days.length) * 100);
+    lines.push([esc(m.name), esc(m.id), ...d.days.map((k) => (set.has(k) ? 1 : 0)), set.size, pct + '%'].join(','));
+  }
+  const blob = new Blob(['\ufeff' + lines.join('\n')], { type: 'text/csv;charset=utf-8' });
+  const a = h('a', { href: URL.createObjectURL(blob), download: 'absensi-' + d.month + '.csv' });
+  document.body.append(a); a.click(); a.remove();
+}
+
+// ---------- Events ----------
+function shiftMonth(delta) {
+  const [y, m] = state.month.split('-').map(Number);
+  const dt = new Date(Date.UTC(y, m - 1 + delta, 1));
+  state.month = dt.getUTCFullYear() + '-' + String(dt.getUTCMonth() + 1).padStart(2, '0');
+  $('#month').value = state.month;
+  state.date = null;
+  load();
+}
+
+$('#connect').addEventListener('click', connect);
+document.querySelectorAll('#setup input').forEach((i) => i.addEventListener('keydown', (e) => { if (e.key === 'Enter') connect(); }));
+$('#prev').addEventListener('click', () => shiftMonth(-1));
+$('#next').addEventListener('click', () => shiftMonth(1));
+$('#month').addEventListener('change', (e) => { if (e.target.value) { state.month = e.target.value; state.date = null; load(); } });
+$('#refresh').addEventListener('click', load);
+$('#csv').addEventListener('click', exportCsv);
+$('#logout').addEventListener('click', () => {
+  clearCfg(); state.cfg = null; state.data = null;
+  $('#app').classList.add('hidden'); $('#setup').classList.remove('hidden');
+  if (!state.hasEnvToken) $('#token').value = '';
+});
+document.querySelectorAll('.tabs button').forEach((b) => b.addEventListener('click', () => { state.tab = b.dataset.tab; render(); }));
+
+(async function init() {
+  try {
+    const c = await (await fetch('/api/config')).json();
+    state.hasEnvToken = !!c.hasEnvToken;
+    $('#tokenField').classList.toggle('hidden', state.hasEnvToken);
+  } catch (e) {}
+  const saved = loadCfg();
+  if (saved) {
+    FIELDS.forEach((f) => ($('#' + f).value = saved[f] || ''));
+    if (localStorage.getItem('absensi.cfg')) $('#remember').checked = true;
+    $('#connect').click();
+  }
+})();
+</script>
+</body>
+</html>
