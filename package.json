@@ -1,1 +1,13 @@
+{
+  "name": "absensi-discord",
+  "version": "1.0.0",
+  "description": "Web rekap absensi dari react di channel Discord",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
 
