@@ -3,7 +3,7 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 
-const API = process.env.DISCORD_API || 'https://discord.com/api/v10';
+const API = 'https://discord.com/api/v10';
 const TZ = 'Asia/Jakarta';
 const PORT = process.env.PORT || 3000;
 const PUBLIC_DIR = path.join(__dirname, 'public');
@@ -11,14 +11,18 @@ const PUBLIC_DIR = path.join(__dirname, 'public');
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 // ---------- Discord REST helper (auto-retry saat rate limit) ----------
-async function dc(token, p, tries = 0) {
-  const res = await fetch(API + p, {
-    headers: { Authorization: 'Bot ' + token, 'User-Agent': 'AbsensiWeb (self-hosted, 1.0)' },
-  });
+async function dc(token, p, opts = {}, tries = 0) {
+  const headers = { Authorization: 'Bot ' + token, 'User-Agent': 'AbsensiWeb (self-hosted, 1.0)' };
+  const init = { method: opts.method || 'GET', headers };
+  if (opts.body !== undefined) {
+    headers['Content-Type'] = 'application/json';
+    init.body = JSON.stringify(opts.body);
+  }
+  const res = await fetch(API + p, init);
   if (res.status === 429 && tries < 6) {
     const j = await res.json().catch(() => ({}));
     await sleep(Math.ceil((j.retry_after || 1) * 1000) + 150);
-    return dc(token, p, tries + 1);
+    return dc(token, p, opts, tries + 1);
   }
   if (!res.ok) {
     const j = await res.json().catch(() => ({}));
@@ -102,7 +106,7 @@ async function fetchGuildMembers(token, guildId) {
 }
 
 // ---------- Handlers ----------
-const tokenOf = (body) => String(body.token || process.env.DISCORD_TOKEN || '').trim();
+const tokenOf = (body) => String(body.token || '').trim();
 const idOk = (s) => /^\d{5,25}$/.test(String(s || ''));
 
 function userError(msg) {
@@ -215,10 +219,53 @@ async function attendance(body) {
   };
 }
 
+// ---------- Kirim peringatan lewat DM ----------
+const DM_ERRORS = {
+  50007: 'DM anggota ini tertutup (tidak menerima pesan dari bot).',
+  10013: 'Pengguna tidak ditemukan.',
+  40003: 'Terlalu cepat membuka DM, coba lagi beberapa menit lagi.',
+};
+
+async function sendDm(token, userId, content) {
+  const ch = await dc(token, '/users/@me/channels', { method: 'POST', body: { recipient_id: userId } });
+  await dc(token, `/channels/${ch.id}/messages`, {
+    method: 'POST',
+    body: { content, allowed_mentions: { parse: [] } },
+  });
+}
+
+async function dm(body) {
+  const token = tokenOf(body);
+  if (!token) throw userError('Token bot wajib diisi.');
+  const items = Array.isArray(body.items) ? body.items : [];
+  if (!items.length) throw userError('Pilih minimal satu anggota.');
+  if (items.length > 25) throw userError('Maksimal 25 DM per permintaan.');
+  for (const it of items) {
+    if (!it || !idOk(it.userId)) throw userError('ID anggota tidak valid.');
+    const text = String(it.message || '').trim();
+    if (!text) throw userError('Isi pesan tidak boleh kosong.');
+    if (text.length > 1900) throw userError('Pesan terlalu panjang (maksimal 1900 karakter).');
+  }
+  const results = [];
+  for (let i = 0; i < items.length; i++) {
+    const userId = String(items[i].userId);
+    try {
+      await sendDm(token, userId, String(items[i].message).trim());
+      results.push({ userId, ok: true });
+    } catch (e) {
+      if (e.status === 401) throw e;
+      results.push({ userId, ok: false, error: DM_ERRORS[e.code] || e.message || 'Gagal mengirim.' });
+    }
+    if (i < items.length - 1) await sleep(1200); // jeda supaya tidak kena batas Discord
+  }
+  return { results };
+}
+
 const routes = {
   'POST /api/verify': verify,
   'POST /api/attendance': attendance,
-  'GET /api/config': async () => ({ hasEnvToken: !!process.env.DISCORD_TOKEN }),
+  'POST /api/dm': dm,
+  'GET /api/config': async () => ({ hasEnvToken: false }),
 };
 
 // ---------- HTTP server ----------
@@ -279,4 +326,4 @@ const server = http.createServer(async (req, res) => {
 });
 
 server.listen(PORT, () => console.log(`Web absensi jalan di http://localhost:${PORT}`));
-                             
+    
