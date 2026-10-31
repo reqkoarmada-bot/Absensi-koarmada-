@@ -33,7 +33,7 @@
   .hidden { display: none !important; }
   .bar { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
   .tabs { display: flex; gap: 4px; background: var(--panel); padding: 4px; border-radius: 10px; border: 1px solid var(--line); }
-  .tabs button { border: 0; background: transparent; color: var(--muted); }
+  .tabs button { border: 0; background: transparent; color: var(--muted); white-space: nowrap; flex: none; }
   .tabs button.on { background: var(--panel2); color: var(--text); }
   .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 12px 0; }
   .stat { background: var(--panel2); border-radius: 10px; padding: 10px 12px; }
@@ -61,6 +61,23 @@
   .mlist td { text-align: left; } .mlist td.num { text-align: right; }
   .empty { color: var(--muted); padding: 24px; text-align: center; }
   .spin { color: var(--muted); padding: 24px; text-align: center; }
+  input[type=number], textarea {
+    padding: 10px 12px; background: var(--panel2); color: var(--text);
+    border: 1px solid var(--line); border-radius: 8px; font: inherit;
+  }
+  input[type=number] { width: 84px; }
+  textarea { width: 100%; min-height: 110px; resize: vertical; }
+  textarea:focus, input[type=number]:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+  .preview { white-space: pre-wrap; background: var(--panel2); border: 1px dashed var(--line); border-radius: 8px; padding: 10px 12px; font-size: 14px; color: var(--muted); }
+  .wlist { border: 1px solid var(--line); border-radius: 10px; max-height: 420px; overflow: auto; }
+  .wrow { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 10px; padding: 8px 10px; border-bottom: 1px solid var(--line); cursor: pointer; margin: 0; color: var(--text); font-size: 14px; }
+  .wrow:last-child { border-bottom: 0; }
+  .wrow input[type=checkbox] { width: 18px; height: 18px; flex: none; }
+  .wrow .person { flex: 1; padding: 0; }
+  .wrow .nums { color: var(--muted); font-size: 13px; white-space: nowrap; }
+  .wrow .st { font-size: 12px; flex-basis: 100%; padding-left: 28px; }
+  .wrow .st:empty { display: none; }
+  .okc { color: var(--ok); } .badc { color: var(--bad); }
 </style>
 </head>
 <body>
@@ -110,6 +127,7 @@
       <button data-tab="today" class="on">Hari ini</button>
       <button data-tab="table">Tabel tanggal</button>
       <button data-tab="month">Rekap bulanan</button>
+      <button data-tab="warn">Peringatan</button>
     </div>
     <div id="warn" class="warn hidden"></div>
     <div id="appErr" class="err hidden"></div>
@@ -225,7 +243,7 @@ function render() {
     $('#view').replaceChildren(h('div', { class: 'card empty' }, 'Belum ada pesan absensi di bulan ini. Kalau staff sudah kirim chat absensi tapi tidak muncul, cek kata kunci atau pastikan sudah ada yang react.'));
     return;
   }
-  const v = state.tab === 'today' ? viewToday(d) : state.tab === 'table' ? viewTable(d) : viewMonth(d);
+  const v = state.tab === 'today' ? viewToday(d) : state.tab === 'table' ? viewTable(d) : state.tab === 'month' ? viewMonth(d) : viewWarn(d);
   $('#view').replaceChildren(v);
 }
 
@@ -277,6 +295,145 @@ function viewMonth(d) {
     h('tbody', {}, rows)));
 }
 
+// ---------- Peringatan lewat DM ----------
+const DEFAULT_MSG = 'Halo {nama}, ini pengingat dari staff. Di bulan {bulan} kamu baru hadir {hadir} dari {total} absensi ({persen}%). Yuk lebih aktif absen ya. Kalau ada kendala, kabari staff.';
+const warnState = { threshold: 50, template: DEFAULT_MSG, selected: new Set(), key: null, results: {}, sending: false };
+
+const monthLabel = (m) => new Date(m + '-15T12:00:00+07:00').toLocaleDateString('id-ID', { month: 'long', year: 'numeric', timeZone: 'Asia/Jakarta' });
+function fillMsg(tpl, d, s) {
+  return tpl
+    .replace(/\{nama\}/g, () => s.m.name)
+    .replace(/\{hadir\}/g, () => s.n)
+    .replace(/\{total\}/g, () => d.days.length)
+    .replace(/\{persen\}/g, () => s.pct)
+    .replace(/\{bulan\}/g, () => monthLabel(d.month));
+}
+
+function viewWarn(d) {
+  const low = monthStats(d)
+    .filter((s) => s.pct < warnState.threshold)
+    .sort((a, b) => a.pct - b.pct || a.m.name.localeCompare(b.m.name, 'id'));
+  const alreadySent = (id) => warnState.results[id] && warnState.results[id].ok;
+  const key = d.month + '|' + warnState.threshold;
+  if (warnState.key !== key) {
+    warnState.key = key;
+    warnState.selected = new Set(low.filter((s) => !alreadySent(s.m.id)).map((s) => s.m.id));
+  }
+
+  const countEl = h('span', {});
+  const preview = h('div', { class: 'preview' });
+  const summary = h('div', { class: 'hint', style: 'margin-top:8px' });
+  const sendBtn = h('button', { class: 'primary', onclick: send });
+  const boxes = {};
+  const statusEls = {};
+  const picked = () => low.filter((s) => warnState.selected.has(s.m.id));
+
+  function paintStatus(id) {
+    const r = warnState.results[id];
+    const el = statusEls[id];
+    if (!el) return;
+    el.textContent = r ? (r.ok ? '✓ terkirim' : '✗ ' + r.error) : '';
+    el.className = 'st ' + (r ? (r.ok ? 'okc' : 'badc') : '');
+  }
+
+  function refresh() {
+    const sel = picked();
+    countEl.textContent = sel.length + ' dipilih dari ' + low.length;
+    sendBtn.textContent = warnState.sending ? 'Mengirim…' : 'Kirim DM ke ' + sel.length + ' anggota';
+    sendBtn.disabled = warnState.sending || !sel.length || !warnState.template.trim();
+    const sample = sel[0] || low[0];
+    preview.textContent = sample ? fillMsg(warnState.template, d, sample) : 'Tidak ada anggota di bawah batas ini.';
+  }
+
+  async function send() {
+    const sel = picked();
+    if (!sel.length || warnState.sending) return;
+    const names = sel.slice(0, 10).map((s) => '• ' + s.m.name).join('\n') + (sel.length > 10 ? '\n• …dan ' + (sel.length - 10) + ' lainnya' : '');
+    if (!confirm('Kirim DM peringatan ke ' + sel.length + ' anggota?\n\n' + names)) return;
+    warnState.sending = true;
+    refresh();
+    showErr($('#appErr'), '');
+    summary.textContent = '';
+    let ok = 0, fail = 0;
+    try {
+      for (let i = 0; i < sel.length; i += 10) {
+        const chunk = sel.slice(i, i + 10);
+        sendBtn.textContent = 'Mengirim ' + Math.min(i + 10, sel.length) + '/' + sel.length + '…';
+        const res = await api('/api/dm', {
+          ...state.cfg,
+          items: chunk.map((s) => ({ userId: s.m.id, message: fillMsg(warnState.template, d, s) })),
+        });
+        for (const r of res.results) {
+          warnState.results[r.userId] = r;
+          paintStatus(r.userId);
+          if (r.ok) { ok++; warnState.selected.delete(r.userId); if (boxes[r.userId]) boxes[r.userId].checked = false; }
+          else fail++;
+        }
+      }
+    } catch (e) {
+      showErr($('#appErr'), e.message);
+    }
+    warnState.sending = false;
+    refresh();
+    summary.textContent = 'Selesai: ' + ok + ' terkirim, ' + fail + ' gagal.' + (fail ? ' Yang gagal biasanya karena DM-nya tertutup.' : '');
+  }
+
+  const thr = h('input', {
+    type: 'number', min: '1', max: '100', id: 'thr',
+    onchange: (e) => {
+      const v = Math.max(1, Math.min(100, Math.round(Number(e.target.value) || 50)));
+      warnState.threshold = v;
+      render();
+    },
+  });
+  thr.value = warnState.threshold;
+
+  const ta = h('textarea', { maxlength: '1500', oninput: (e) => { warnState.template = e.target.value; refresh(); } });
+  ta.value = warnState.template;
+
+  const rows = low.map((s) => {
+    const cb = h('input', {
+      type: 'checkbox',
+      onchange: (e) => {
+        if (e.target.checked) warnState.selected.add(s.m.id); else warnState.selected.delete(s.m.id);
+        refresh();
+      },
+    });
+    cb.checked = warnState.selected.has(s.m.id);
+    boxes[s.m.id] = cb;
+    statusEls[s.m.id] = h('span', { class: 'st' });
+    paintStatus(s.m.id);
+    return h('label', { class: 'wrow' }, cb, person(s.m), h('span', { class: 'nums' }, s.n + '/' + d.days.length + ' (' + s.pct + '%)'), statusEls[s.m.id]);
+  });
+
+  const setAll = (on) => {
+    warnState.selected = new Set(on ? low.filter((s) => !alreadySent(s.m.id)).map((s) => s.m.id) : []);
+    for (const s of low) boxes[s.m.id].checked = warnState.selected.has(s.m.id);
+    refresh();
+  };
+
+  const view = h('div', { class: 'card' },
+    h('h3', {}, 'Kirim peringatan ke anggota yang jarang absen'),
+    h('div', { class: 'row' }, h('span', {}, 'Kehadiran bulan ini di bawah'), thr, h('span', {}, '%')),
+    d.days.length < 3 && h('div', { class: 'hint' }, 'Baru ' + d.days.length + ' hari absensi di bulan ini, persentase belum terlalu menggambarkan.'),
+    h('label', {}, 'Isi pesan (tiap anggota mendapat angkanya sendiri)'),
+    ta,
+    h('div', { class: 'hint' }, 'Bisa pakai: {nama} {hadir} {total} {persen} {bulan}'),
+    h('div', { class: 'row', style: 'margin-top:6px' },
+      h('button', { onclick: () => { ta.value = DEFAULT_MSG; warnState.template = DEFAULT_MSG; refresh(); } }, 'Pesan bawaan')),
+    h('label', {}, 'Pratinjau (contoh untuk anggota pertama yang dipilih)'),
+    preview,
+    h('div', { class: 'bar', style: 'margin:16px 0 6px' },
+      countEl,
+      h('div', { class: 'row' }, h('button', { onclick: () => setAll(true) }, 'Pilih semua'), h('button', { onclick: () => setAll(false) }, 'Kosongkan'))),
+    low.length ? h('div', { class: 'wlist' }, rows) : h('div', { class: 'empty' }, 'Tidak ada anggota di bawah batas ini 🎉'),
+    h('div', { class: 'row', style: 'margin-top:12px' }, sendBtn),
+    summary,
+    h('div', { class: 'hint', style: 'margin-top:10px' }, 'DM hanya sampai ke anggota yang mengizinkan pesan dari anggota server. Bot mengirim satu per satu dengan jeda, dan anggota yang sudah berhasil dikirimi otomatis tidak dipilih lagi.'));
+  refresh();
+  return view;
+}
+
 // ---------- CSV ----------
 function exportCsv() {
   const d = state.data;
@@ -312,6 +469,7 @@ $('#refresh').addEventListener('click', load);
 $('#csv').addEventListener('click', exportCsv);
 $('#logout').addEventListener('click', () => {
   clearCfg(); state.cfg = null; state.data = null;
+  warnState.results = {}; warnState.key = null; warnState.selected = new Set();
   $('#app').classList.add('hidden'); $('#setup').classList.remove('hidden');
   if (!state.hasEnvToken) $('#token').value = '';
 });
